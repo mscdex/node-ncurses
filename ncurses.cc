@@ -27,7 +27,7 @@ static int stdout_fd = -1;
 
 static Persistent<String> inputChar_symbol;
 static Persistent<String> inputLine_symbol;
-#define ECHO_STATE_SYMBOL String::NewSymbol("echoInput")
+#define ECHO_STATE_SYMBOL String::NewSymbol("echo")
 #define LINES_STATE_SYMBOL String::NewSymbol("lines")
 #define COLS_STATE_SYMBOL String::NewSymbol("cols")
 #define TABSIZE_STATE_SYMBOL String::NewSymbol("tabsize")
@@ -57,7 +57,7 @@ class MyPanel : public NCursesPanel {
 		void setup() {
 			::nodelay(w, true);
 			::nocbreak();
-			::halfdelay(1);
+			::halfdelay(20);
 		}
 		static bool echoInput;
 	public:
@@ -72,19 +72,24 @@ class MyPanel : public NCursesPanel {
 				endwin();
 		}
 		static void echo(bool value) {
-			echoInput = value;
-			if (echoInput)
-				echo();
+			MyPanel::echoInput = value;
+			if (MyPanel::echoInput)
+				::echo();
 			else
-				noecho();
+				::noecho();
 		}
 		static bool echo() {
-			return echoInput;
+			return MyPanel::echoInput;
 		}
 		bool isStdscr() {
 			return (w == ::stdscr);
 		}
+		char getch() {
+			return ::wgetch(w);
+		}
 };
+
+bool MyPanel::echoInput = false;
 
 class ncWindow : public EventEmitter {
 	public:
@@ -182,6 +187,7 @@ class ncWindow : public EventEmitter {
 			NODE_SET_PROTOTYPE_METHOD(t, "standout", Standout);
 
 			// Terminal settings
+			t->PrototypeTemplate()->SetAccessor(ECHO_STATE_SYMBOL, EchoStateGetter, EchoStateSetter);
 			t->PrototypeTemplate()->SetAccessor(LINES_STATE_SYMBOL, LinesStateGetter);
 			t->PrototypeTemplate()->SetAccessor(COLS_STATE_SYMBOL, ColsStateGetter);
 			t->PrototypeTemplate()->SetAccessor(TABSIZE_STATE_SYMBOL, TabsizeStateGetter);
@@ -1270,10 +1276,10 @@ class ncWindow : public EventEmitter {
 
 			if (!value->IsBoolean()) {
 				ThrowException(Exception::TypeError(
-					String::New("echoInput should be of Boolean value")
+					String::New("echo should be of Boolean value")
 				));
 			}
-			
+
 			MyPanel::echo(value->BooleanValue());
 		}
 
@@ -1470,19 +1476,27 @@ class ncWindow : public EventEmitter {
 
 				char chr;
 				string tmp;
-				while ((chr = getch()) != ERR) {
+				while ((chr = this->panel()->getch()) != ERR) {
 					tmp.clear();
 					tmp += chr;
 					Local<Value> vChr[1];
 					vChr[0] = String::New(tmp.c_str());
 					Emit(inputChar_symbol, 1, vChr);
-					if (chr == '\n') {
-						Local<Value> vLine[1];
-						vLine[0] = String::New(curInput_.c_str());
-						Emit(inputLine_symbol, 1, vLine);
-						curInput_.clear();
-					} else
-						curInput_ += chr;
+
+					// Handle backspace. On my machine the backspace key was set to the bell (^G) ??
+					if (chr == KEY_BACKSPACE || chr == 7) {
+						this->panel()->delch();
+						if (curInput_.length() > 0)
+							curInput_.erase(curInput_.length()-1);
+					} else {
+						if (chr == '\n' || chr == '\r') {
+							Local<Value> vLine[1];
+							vLine[0] = String::New(curInput_.c_str());
+							Emit(inputLine_symbol, 1, vLine);
+							curInput_.clear();
+						} else
+							curInput_ += tmp;
+					}
 				}
 			}
 		}
