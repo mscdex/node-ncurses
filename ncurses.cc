@@ -1,6 +1,12 @@
-#include "internal.h"
-#include <cursesp.h>
+#ifndef CTRL
+#define CTRL(x) ((x) & 0x1f)
+#endif
 
+#ifndef NULL
+#define NULL 0
+#endif
+
+#include <cursesp.h>
 #include <node.h>
 #include <node_events.h>
 
@@ -21,25 +27,25 @@ static int stdout_fd = -1;
 
 static Persistent<String> inputChar_symbol;
 static Persistent<String> inputLine_symbol;
-#define ECHO_STATE_SYMBOL String::New("echoInput")
-#define LINES_STATE_SYMBOL String::New("lines")
-#define COLS_STATE_SYMBOL String::New("cols")
-#define TABSIZE_STATE_SYMBOL String::New("tabsize")
-#define NUMCOLORS_STATE_SYMBOL String::New("numcolors")
-#define HASMOUSE_STATE_SYMBOL String::New("hasmouse")
-#define HIDDEN_STATE_SYMBOL String::New("hidden")
-#define HEIGHT_STATE_SYMBOL String::New("height")
-#define WIDTH_STATE_SYMBOL String::New("width")
-#define BEGX_STATE_SYMBOL String::New("begx")
-#define BEGY_STATE_SYMBOL String::New("begy")
-#define CURX_STATE_SYMBOL String::New("curx")
-#define CURY_STATE_SYMBOL String::New("cury")
-#define MAXX_STATE_SYMBOL String::New("maxx")
-#define MAXY_STATE_SYMBOL String::New("maxy")
-#define BKGD_STATE_SYMBOL String::New("bkgd")
-/*#define COLOR_STATE_SYMBOL String::New("color")
-#define FGCOLOR_STATE_SYMBOL String::New("fgcolor")
-#define BGCOLOR_STATE_SYMBOL String::New("bgcolor")*/
+#define ECHO_STATE_SYMBOL String::NewSymbol("echoInput")
+#define LINES_STATE_SYMBOL String::NewSymbol("lines")
+#define COLS_STATE_SYMBOL String::NewSymbol("cols")
+#define TABSIZE_STATE_SYMBOL String::NewSymbol("tabsize")
+#define NUMCOLORS_STATE_SYMBOL String::NewSymbol("numColors")
+#define HASMOUSE_STATE_SYMBOL String::NewSymbol("hasMouse")
+#define HIDDEN_STATE_SYMBOL String::NewSymbol("hidden")
+#define HEIGHT_STATE_SYMBOL String::NewSymbol("height")
+#define WIDTH_STATE_SYMBOL String::NewSymbol("width")
+#define BEGX_STATE_SYMBOL String::NewSymbol("begx")
+#define BEGY_STATE_SYMBOL String::NewSymbol("begy")
+#define CURX_STATE_SYMBOL String::NewSymbol("curx")
+#define CURY_STATE_SYMBOL String::NewSymbol("cury")
+#define MAXX_STATE_SYMBOL String::NewSymbol("maxx")
+#define MAXY_STATE_SYMBOL String::NewSymbol("maxy")
+#define BKGD_STATE_SYMBOL String::NewSymbol("bkgd")
+/*#define COLOR_STATE_SYMBOL String::NewSymbol("color")
+#define FGCOLOR_STATE_SYMBOL String::NewSymbol("fgcolor")
+#define BGCOLOR_STATE_SYMBOL String::NewSymbol("bgcolor")*/
 
 // Extracts a C string from a V8 Utf8Value.
 const char* ToCString(const v8::String::Utf8Value& value) {
@@ -176,7 +182,7 @@ class ncWindow : public EventEmitter {
 			NODE_SET_PROTOTYPE_METHOD(t, "standout", Standout);
 
 			// Terminal settings
-			/*t->PrototypeTemplate()->SetAccessor(LINES_STATE_SYMBOL, LinesStateGetter);
+			t->PrototypeTemplate()->SetAccessor(LINES_STATE_SYMBOL, LinesStateGetter);
 			t->PrototypeTemplate()->SetAccessor(COLS_STATE_SYMBOL, ColsStateGetter);
 			t->PrototypeTemplate()->SetAccessor(TABSIZE_STATE_SYMBOL, TabsizeStateGetter);
 			t->PrototypeTemplate()->SetAccessor(NUMCOLORS_STATE_SYMBOL, NumcolorsStateGetter);
@@ -192,7 +198,7 @@ class ncWindow : public EventEmitter {
 			t->PrototypeTemplate()->SetAccessor(CURY_STATE_SYMBOL, CuryStateGetter);
 			t->PrototypeTemplate()->SetAccessor(MAXX_STATE_SYMBOL, MaxxStateGetter);
 			t->PrototypeTemplate()->SetAccessor(MAXY_STATE_SYMBOL, MaxyStateGetter);
-			t->PrototypeTemplate()->SetAccessor(BKGD_STATE_SYMBOL, BkgdStateGetter, BkgdStateSetter);*/
+			t->PrototypeTemplate()->SetAccessor(BKGD_STATE_SYMBOL, BkgdStateGetter, BkgdStateSetter);
 			// TODO: color, fgcolor, bgcolor
 			/*t->PrototypeTemplate()->SetAccessor(COLOR_STATE_SYMBOL, ColorStateGetter);
 			t->PrototypeTemplate()->SetAccessor(FGCOLOR_STATE_SYMBOL, FgcolorStateGetter);
@@ -201,7 +207,7 @@ class ncWindow : public EventEmitter {
 			target->Set(String::NewSymbol("ncWindow"), t->GetFunction());
 		}
 		
-		void init() {
+		void init(int nlines=-1, int ncols=-1, int begin_y=-1, int begin_x=-1) {
 			if (stdin_fd < 0) {
 				stdin_fd = STDIN_FILENO;
 				int stdin_flags = fcntl(stdin_fd, F_GETFL, 0);
@@ -221,7 +227,10 @@ class ncWindow : public EventEmitter {
 			read_watcher_.data = this;
 			ev_io_set(&read_watcher_, stdin_fd, EV_READ);
 			ev_io_start(EV_DEFAULT_ &read_watcher_);
-			panel_ = new MyPanel();
+			if (nlines < 0 || ncols < 0 || begin_y < 0 || begin_x < 0)
+				panel_ = new MyPanel();
+			else
+				panel_ = new MyPanel(nlines, ncols, begin_y, begin_x);
 		}
 
 		MyPanel* panel() {
@@ -266,11 +275,22 @@ class ncWindow : public EventEmitter {
 		static Handle<Value> New (const Arguments& args) {
 			HandleScope scope;
 
-			//if (stdin_fd < 0)
-				ncWindow *win = new ncWindow();
-			//else if (args.Length() == 2
+			ncWindow *win;
+			if (stdin_fd < 0)
+				win = new ncWindow();
+			else if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
+				win = new ncWindow(args[0]->Int32Value(), args[1]->Int32Value(), 0, 0);
+			else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsInt32())
+				win = new ncWindow(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Int32Value(), 0);
+			else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsInt32() && args[3]->IsInt32())
+				win = new ncWindow(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Int32Value(), args[3]->Int32Value());
+			else {
+				return ThrowException(Exception::Error(
+					String::New("Invalid number and/or types of arguments")
+				));
+			}
+
 			win->Wrap(args.This());
-			
 			return args.This();
 		}
 
@@ -1424,6 +1444,12 @@ class ncWindow : public EventEmitter {
 		ncWindow() : EventEmitter() {
 			panel_ = NULL;
 			this->init();
+			assert(panel_ != NULL);
+		}
+		
+		ncWindow(int nlines, int ncols, int begin_y, int begin_x) : EventEmitter() {
+			panel_ = NULL;
+			this->init(nlines, ncols, begin_y, begin_x);
 			assert(panel_ != NULL);
 		}
 		
