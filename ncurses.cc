@@ -1,8 +1,5 @@
-#include <ncurses.h>
 #include "internal.h"
-#include <cursesapp.h>
 #include <cursesp.h>
-#include <cursesw.h>
 
 #include <node.h>
 #include <node_events.h>
@@ -13,7 +10,6 @@
 #include <string>
 #include <assert.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <fcntl.h>
 
 using namespace std;

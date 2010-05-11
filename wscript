@@ -13,15 +13,15 @@ def configure(conf):
   conf.check_tool('compiler_cxx')
   conf.check_tool('node_addon')
 
-  conf.env.append_value("LIB_NCURSES", "ncurses")
+  #conf.env.append_value("LIB_NCURSES", "ncurses")
+  #conf.env.append_value("LIB_PANEL", "panel")
   conf.env.append_value("LIB_NCURSESPP", "ncurses++")
-  conf.env.append_value("LIB_PANEL", "panel")
 
 def build(bld):
   obj = bld.new_task_gen('cxx', 'shlib', 'node_addon')
   obj.target = 'ncurses'
   obj.source = 'ncurses.cc'
-  obj.uselib = 'ncursespp panel ncurses'
+  obj.uselib = 'ncursespp'
 
 def shutdown():
   # HACK to get ncurses.node out of build directory.
