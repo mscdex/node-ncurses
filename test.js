@@ -1,7 +1,10 @@
 var nc = require('./ncurses');
 
-var win = new nc.ncWindow();
 var intScroll;
+var win = new nc.ncWindow();
+var win2 = new nc.ncWindow(10, 10);
+win2.boldframe();
+win2.refresh();
 win.centertext(win.lines/2, "hello world");
 win.refresh();
 win.addListener('inputLine', function (str) {
@@ -23,6 +26,6 @@ intScroll = setInterval(function() {
 		win.refresh();
 	} else {
 		win.close();
-		clearInterval(int);
+		clearInterval(intScroll);
 	}
 }, 1000);
