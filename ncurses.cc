@@ -44,10 +44,7 @@ static Persistent<String> inputLine_symbol;
 /*#define COLOR_STATE_SYMBOL String::New("color")
 #define FGCOLOR_STATE_SYMBOL String::New("fgcolor")
 #define BGCOLOR_STATE_SYMBOL String::New("bgcolor")*/
-
-class NCURSES_IMPEXP MyPanel
-  : public NCursesPanel
-{
+class MyPanel : public NCursesPanel {
 	private:
 		void setup() {
 			::nodelay(w, true);
@@ -57,10 +54,10 @@ class NCURSES_IMPEXP MyPanel
 		static bool echoInput;
 	public:
 		MyPanel(int nlines, int ncols, int begin_y = 0, int begin_x = 0) : NCursesPanel(nlines,ncols,begin_y,begin_x) {
-			setup();
+			this->setup();
 		}
 		MyPanel() : NCursesPanel() {
-			setup();
+			this->setup();
 		}
 		static void echo(bool value) {
 			echoInput = value;
@@ -215,6 +212,7 @@ class ncWindow : public EventEmitter {
 			read_watcher_.data = this;
 			ev_io_set(&read_watcher_, stdin_fd, EV_READ);
 			ev_io_start(EV_DEFAULT_ &read_watcher_);
+			panel_ = new MyPanel();
 		}
 
 		MyPanel* panel() {
@@ -238,25 +236,25 @@ class ncWindow : public EventEmitter {
 			return ThrowException(Exception::Error(String::New(message)));
 		}
 		
-		/*void log(const char* message) {
+		/*static void log(const char* message) {
 			ofstream outfile("log", ios::out | ios::app);
 			outfile << message << endl;
 			outfile.close();
 		}
 
-		void log(int val) {
+		static void log(int val) {
 			ofstream outfile("log", ios::out | ios::app);
 			outfile << val << endl;
 			outfile.close();
 		}
 		
-		void log(char val) {
+		static void log(char val) {
 			ofstream outfile("log", ios::out | ios::app);
 			outfile << val << endl;
 			outfile.close();
 		}
 
-		string int2str(int val) {
+		static string int2str(int val) {
 			char buf[256];
 			sprintf(buf, "%i", val);
 			return string(buf);
@@ -265,7 +263,7 @@ class ncWindow : public EventEmitter {
 	protected:
 		static Handle<Value> New (const Arguments& args) {
 			HandleScope scope;
-			
+
 			//if (stdin_fd < 0)
 				ncWindow *win = new ncWindow();
 			//else if (args.Length() == 2
