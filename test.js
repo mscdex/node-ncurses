@@ -1,9 +1,11 @@
 var nc = require('./ncurses');
 
 var win = new nc.ncWindow();
-win.print("hello world", 0, 0);
+win.print("hello world");
+win.refresh();
 win.addListener('inputLine', function (str) {
-	win.print("You typed: " + str, 0, 1);
-	setTimeout(function() { win.close(); }, 2000);
+	win.print(1, 0, "You typed: " + str);
+	win.refresh();
+	setTimeout(function() { win.close(); process.exit(0); }, 2000);
 });
 setTimeout(function() { win.close(); }, 5000);
