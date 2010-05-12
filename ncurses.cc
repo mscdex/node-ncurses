@@ -31,7 +31,6 @@ static Persistent<String> inputLine_symbol;
 #define LINES_STATE_SYMBOL String::NewSymbol("lines")
 #define COLS_STATE_SYMBOL String::NewSymbol("cols")
 #define TABSIZE_STATE_SYMBOL String::NewSymbol("tabsize")
-#define NUMCOLORS_STATE_SYMBOL String::NewSymbol("numColors")
 #define HASMOUSE_STATE_SYMBOL String::NewSymbol("hasMouse")
 #define HIDDEN_STATE_SYMBOL String::NewSymbol("hidden")
 #define HEIGHT_STATE_SYMBOL String::NewSymbol("height")
@@ -44,8 +43,8 @@ static Persistent<String> inputLine_symbol;
 #define MAXY_STATE_SYMBOL String::NewSymbol("maxy")
 #define BKGD_STATE_SYMBOL String::NewSymbol("bkgd")
 #define HASCOLORS_STATE_SYMBOL String::NewSymbol("hasColors")
-#define FGCOLOR_STATE_SYMBOL String::NewSymbol("fgcolor")
-#define BGCOLOR_STATE_SYMBOL String::NewSymbol("bgcolor")
+#define NUMCOLORS_STATE_SYMBOL String::NewSymbol("numColors")
+#define MAXCOLORPAIRS_STATE_SYMBOL String::NewSymbol("maxColorPairs")
 
 // Extracts a C string from a V8 Utf8Value.
 const char* ToCString(const v8::String::Utf8Value& value) {
@@ -55,13 +54,27 @@ const char* ToCString(const v8::String::Utf8Value& value) {
 class MyPanel : public NCursesPanel {
 	private:
 		void setup() {
+			// Initialize color support if it's available
 			if (::has_colors())
 				::start_color();
+				
+			// Set non-blocking mode and tell ncurses we want to receive one character at a time instead of one line at a time
 			::nodelay(w, true);
 			::nocbreak();
 			::halfdelay(20);
-			::init_pair(1, COLOR_WHITE, COLOR_BLACK);
-			::wcolor_set(w, 1, NULL);
+
+			// Only setup the default palette once, as to not override any possible palette changes made by the user later on
+			if (w == ::stdscr) {
+				::init_pair(1, COLOR_RED, COLOR_BLACK);
+				::init_pair(2, COLOR_GREEN, COLOR_BLACK);
+				::init_pair(3, COLOR_YELLOW, COLOR_BLACK);
+				::init_pair(4, COLOR_BLUE, COLOR_BLACK);
+				::init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
+				::init_pair(6, COLOR_CYAN, COLOR_BLACK);
+			}
+			
+			// Set the default colors on creation (white on black)
+			::wcolor_set(w, 0, NULL);
 		}
 		static bool echoInput;
 	public:
@@ -97,26 +110,39 @@ class MyPanel : public NCursesPanel {
 		static int num_colors() {
 			return COLORS;
 		}
-		void setFgcolor(short color) {
-			short fore, back;
-			if (::pair_content(1, &fore, &back) != ERR)
-				::init_pair(1, color, back);
+		static int max_pairs() {
+			return COLOR_PAIRS;
 		}
-		void setBgcolor(short color) {
-			short fore, back;
-			if (::pair_content(1, &fore, &back) != ERR)
-				::init_pair(1, fore, color);
+		unsigned int pair(int pair, short fore=-1, short back=-1) {
+			if (::has_colors()) {
+				if (fore == -1 && back == -1)
+					return COLOR_PAIR(pair);
+				else {
+					::init_pair(pair, fore, back);
+					return COLOR_PAIR(pair);
+				}
+			}
 		}
-		short getFgcolor() {
+		void setFgcolor(int pair, short color) {
 			short fore, back;
-			if (::pair_content(1, &fore, &back) != ERR)
+			if (::pair_content(pair, &fore, &back) != ERR)
+				::init_pair(pair, color, back);
+		}
+		void setBgcolor(int pair, short color) {
+			short fore, back;
+			if (::pair_content(pair, &fore, &back) != ERR)
+				::init_pair(pair, fore, color);
+		}
+		short getFgcolor(int pair) {
+			short fore, back;
+			if (::pair_content(pair, &fore, &back) != ERR)
 				return fore;
 			else
 				return -1;
 		}
-		short getBgcolor() {
+		short getBgcolor(int pair) {
 			short fore, back;
-			if (::pair_content(1, &fore, &back) != ERR)
+			if (::pair_content(pair, &fore, &back) != ERR)
 				return back;
 			else
 				return -1;
@@ -219,14 +245,18 @@ class ncWindow : public EventEmitter {
 			NODE_SET_PROTOTYPE_METHOD(t, "keypad", Keypad);
 			NODE_SET_PROTOTYPE_METHOD(t, "meta", Meta);
 			NODE_SET_PROTOTYPE_METHOD(t, "standout", Standout);
+
+			NODE_SET_PROTOTYPE_METHOD(t, "colorPair", Colorpair);
 			
 			// Terminal settings
 			t->PrototypeTemplate()->SetAccessor(ECHO_STATE_SYMBOL, EchoStateGetter, EchoStateSetter);
 			t->PrototypeTemplate()->SetAccessor(LINES_STATE_SYMBOL, LinesStateGetter);
 			t->PrototypeTemplate()->SetAccessor(COLS_STATE_SYMBOL, ColsStateGetter);
 			t->PrototypeTemplate()->SetAccessor(TABSIZE_STATE_SYMBOL, TabsizeStateGetter);
-			t->PrototypeTemplate()->SetAccessor(NUMCOLORS_STATE_SYMBOL, NumcolorsStateGetter);
 			t->PrototypeTemplate()->SetAccessor(HASMOUSE_STATE_SYMBOL, HasmouseStateGetter);
+			t->PrototypeTemplate()->SetAccessor(HASCOLORS_STATE_SYMBOL, HascolorsStateGetter);
+			t->PrototypeTemplate()->SetAccessor(NUMCOLORS_STATE_SYMBOL, NumcolorsStateGetter);
+			t->PrototypeTemplate()->SetAccessor(MAXCOLORPAIRS_STATE_SYMBOL, MaxcolorpairsStateGetter);
 
 			// Panel/Window settings
 			t->PrototypeTemplate()->SetAccessor(HIDDEN_STATE_SYMBOL, HiddenStateGetter);
@@ -239,9 +269,6 @@ class ncWindow : public EventEmitter {
 			t->PrototypeTemplate()->SetAccessor(MAXX_STATE_SYMBOL, MaxxStateGetter);
 			t->PrototypeTemplate()->SetAccessor(MAXY_STATE_SYMBOL, MaxyStateGetter);
 			t->PrototypeTemplate()->SetAccessor(BKGD_STATE_SYMBOL, BkgdStateGetter, BkgdStateSetter);
-			t->PrototypeTemplate()->SetAccessor(HASCOLORS_STATE_SYMBOL, HascolorsStateGetter);
-			t->PrototypeTemplate()->SetAccessor(FGCOLOR_STATE_SYMBOL, FgcolorStateGetter, FgcolorStateSetter);
-			t->PrototypeTemplate()->SetAccessor(BGCOLOR_STATE_SYMBOL, BgcolorStateGetter, BgcolorStateSetter);
 			
 			target->Set(String::NewSymbol("ncWindow"), t->GetFunction());
 		}
@@ -1292,6 +1319,24 @@ class ncWindow : public EventEmitter {
 			return scope.Close(Integer::New(ret));
 		}
 
+		static Handle<Value> Colorpair (const Arguments& args) {
+			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			HandleScope scope;
+			
+			int ret;
+			if (args.Length() == 1 && args[0]->IsInt32())
+				ret = win->panel()->pair(args[0]->Int32Value());
+			else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsInt32())
+				ret = win->panel()->pair(args[0]->Int32Value(), (short)args[1]->Int32Value(), (short)args[2]->Int32Value());
+			else {
+				return ThrowException(Exception::Error(
+					String::New("Invalid number and/or types of arguments")
+				));
+			}
+
+			return scope.Close(Integer::New(ret));
+		}
+
 		// Getters/Setters
 		static Handle<Value> EchoStateGetter (Local<String> property, const AccessorInfo& info) {
 			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
@@ -1345,16 +1390,6 @@ class ncWindow : public EventEmitter {
 			HandleScope scope;
 			
 			return scope.Close(Integer::New(win->panel()->tabsize()));
-		}
-
-		static Handle<Value> NumcolorsStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
-			assert(win);
-			assert(property == NUMCOLORS_STATE_SYMBOL);
-			
-			HandleScope scope;
-			
-			return scope.Close(Integer::New(MyPanel::num_colors()));
 		}
 
 		static Handle<Value> HasmouseStateGetter (Local<String> property, const AccessorInfo& info) {
@@ -1491,52 +1526,24 @@ class ncWindow : public EventEmitter {
 			return scope.Close(Boolean::New(MyPanel::has_colors()));
 		}
 
-		static Handle<Value> FgcolorStateGetter (Local<String> property, const AccessorInfo& info) {
+		static Handle<Value> NumcolorsStateGetter (Local<String> property, const AccessorInfo& info) {
 			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
 			assert(win);
-			assert(property == FGCOLOR_STATE_SYMBOL);
+			assert(property == NUMCOLORS_STATE_SYMBOL);
 			
 			HandleScope scope;
 			
-			return scope.Close(Integer::New(win->panel()->getFgcolor()));
+			return scope.Close(Integer::New(MyPanel::num_colors()));
 		}
 
-		static void FgcolorStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
+		static Handle<Value> MaxcolorpairsStateGetter (Local<String> property, const AccessorInfo& info) {
 			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
 			assert(win);
-			assert(property == FGCOLOR_STATE_SYMBOL);
-
-			if (!value->IsInt32()) {
-				ThrowException(Exception::TypeError(
-					String::New("fgcolor should be of integer value")
-				));
-			}
-			
-			win->panel()->setFgcolor((short)value->Int32Value());
-		}
-
-		static Handle<Value> BgcolorStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
-			assert(win);
-			assert(property == BGCOLOR_STATE_SYMBOL);
+			assert(property == MAXCOLORPAIRS_STATE_SYMBOL);
 			
 			HandleScope scope;
 			
-			return scope.Close(Integer::New((int)win->panel()->getBgcolor()));
-		}
-
-		static void BgcolorStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
-			assert(win);
-			assert(property == BGCOLOR_STATE_SYMBOL);
-
-			if (!value->IsInt32()) {
-				ThrowException(Exception::TypeError(
-					String::New("bgcolor should be of integer value")
-				));
-			}
-			
-			win->panel()->setBgcolor((short)value->Int32Value());
+			return scope.Close(Integer::New(MyPanel::max_pairs()));
 		}
 
 		ncWindow() : EventEmitter() {
