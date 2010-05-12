@@ -43,9 +43,9 @@ static Persistent<String> inputLine_symbol;
 #define MAXX_STATE_SYMBOL String::NewSymbol("maxx")
 #define MAXY_STATE_SYMBOL String::NewSymbol("maxy")
 #define BKGD_STATE_SYMBOL String::NewSymbol("bkgd")
-/*#define COLOR_STATE_SYMBOL String::NewSymbol("color")
+#define HASCOLORS_STATE_SYMBOL String::NewSymbol("hasColors")
 #define FGCOLOR_STATE_SYMBOL String::NewSymbol("fgcolor")
-#define BGCOLOR_STATE_SYMBOL String::NewSymbol("bgcolor")*/
+#define BGCOLOR_STATE_SYMBOL String::NewSymbol("bgcolor")
 
 // Extracts a C string from a V8 Utf8Value.
 const char* ToCString(const v8::String::Utf8Value& value) {
@@ -55,9 +55,13 @@ const char* ToCString(const v8::String::Utf8Value& value) {
 class MyPanel : public NCursesPanel {
 	private:
 		void setup() {
+			if (::has_colors())
+				::start_color();
 			::nodelay(w, true);
 			::nocbreak();
 			::halfdelay(20);
+			::init_pair(1, COLOR_WHITE, COLOR_BLACK);
+			::wcolor_set(w, 1, NULL);
 		}
 		static bool echoInput;
 	public:
@@ -86,6 +90,36 @@ class MyPanel : public NCursesPanel {
 		}
 		char getch() {
 			return ::wgetch(w);
+		}
+		static bool has_colors() {
+			return ::has_colors();
+		}
+		static int num_colors() {
+			return COLORS;
+		}
+		void setFgcolor(short color) {
+			short fore, back;
+			if (::pair_content(1, &fore, &back) != ERR)
+				::init_pair(1, color, back);
+		}
+		void setBgcolor(short color) {
+			short fore, back;
+			if (::pair_content(1, &fore, &back) != ERR)
+				::init_pair(1, fore, color);
+		}
+		short getFgcolor() {
+			short fore, back;
+			if (::pair_content(1, &fore, &back) != ERR)
+				return fore;
+			else
+				return -1;
+		}
+		short getBgcolor() {
+			short fore, back;
+			if (::pair_content(1, &fore, &back) != ERR)
+				return back;
+			else
+				return -1;
 		}
 };
 
@@ -185,7 +219,7 @@ class ncWindow : public EventEmitter {
 			NODE_SET_PROTOTYPE_METHOD(t, "keypad", Keypad);
 			NODE_SET_PROTOTYPE_METHOD(t, "meta", Meta);
 			NODE_SET_PROTOTYPE_METHOD(t, "standout", Standout);
-
+			
 			// Terminal settings
 			t->PrototypeTemplate()->SetAccessor(ECHO_STATE_SYMBOL, EchoStateGetter, EchoStateSetter);
 			t->PrototypeTemplate()->SetAccessor(LINES_STATE_SYMBOL, LinesStateGetter);
@@ -205,10 +239,9 @@ class ncWindow : public EventEmitter {
 			t->PrototypeTemplate()->SetAccessor(MAXX_STATE_SYMBOL, MaxxStateGetter);
 			t->PrototypeTemplate()->SetAccessor(MAXY_STATE_SYMBOL, MaxyStateGetter);
 			t->PrototypeTemplate()->SetAccessor(BKGD_STATE_SYMBOL, BkgdStateGetter, BkgdStateSetter);
-			// TODO: color, fgcolor, bgcolor
-			/*t->PrototypeTemplate()->SetAccessor(COLOR_STATE_SYMBOL, ColorStateGetter);
-			t->PrototypeTemplate()->SetAccessor(FGCOLOR_STATE_SYMBOL, FgcolorStateGetter);
-			t->PrototypeTemplate()->SetAccessor(BGCOLOR_STATE_SYMBOL, BgcolorStateGetter);*/
+			t->PrototypeTemplate()->SetAccessor(HASCOLORS_STATE_SYMBOL, HascolorsStateGetter);
+			t->PrototypeTemplate()->SetAccessor(FGCOLOR_STATE_SYMBOL, FgcolorStateGetter, FgcolorStateSetter);
+			t->PrototypeTemplate()->SetAccessor(BGCOLOR_STATE_SYMBOL, BgcolorStateGetter, BgcolorStateSetter);
 			
 			target->Set(String::NewSymbol("ncWindow"), t->GetFunction());
 		}
@@ -1062,6 +1095,7 @@ class ncWindow : public EventEmitter {
 					String::New("Invalid number and/or types of arguments")
 				));
 			}
+
 			return scope.Close(Integer::New(ret));
 		}
 
@@ -1320,7 +1354,7 @@ class ncWindow : public EventEmitter {
 			
 			HandleScope scope;
 			
-			return scope.Close(Integer::New(win->panel()->colors()));
+			return scope.Close(Integer::New(MyPanel::num_colors()));
 		}
 
 		static Handle<Value> HasmouseStateGetter (Local<String> property, const AccessorInfo& info) {
@@ -1447,6 +1481,64 @@ class ncWindow : public EventEmitter {
 			win->panel()->bkgd(value->Uint32Value());
 		}
 
+		static Handle<Value> HascolorsStateGetter (Local<String> property, const AccessorInfo& info) {
+			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			assert(win);
+			assert(property == HASCOLORS_STATE_SYMBOL);
+			
+			HandleScope scope;
+			
+			return scope.Close(Boolean::New(MyPanel::has_colors()));
+		}
+
+		static Handle<Value> FgcolorStateGetter (Local<String> property, const AccessorInfo& info) {
+			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			assert(win);
+			assert(property == FGCOLOR_STATE_SYMBOL);
+			
+			HandleScope scope;
+			
+			return scope.Close(Integer::New(win->panel()->getFgcolor()));
+		}
+
+		static void FgcolorStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
+			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			assert(win);
+			assert(property == FGCOLOR_STATE_SYMBOL);
+
+			if (!value->IsInt32()) {
+				ThrowException(Exception::TypeError(
+					String::New("fgcolor should be of integer value")
+				));
+			}
+			
+			win->panel()->setFgcolor((short)value->Int32Value());
+		}
+
+		static Handle<Value> BgcolorStateGetter (Local<String> property, const AccessorInfo& info) {
+			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			assert(win);
+			assert(property == BGCOLOR_STATE_SYMBOL);
+			
+			HandleScope scope;
+			
+			return scope.Close(Integer::New((int)win->panel()->getBgcolor()));
+		}
+
+		static void BgcolorStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
+			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			assert(win);
+			assert(property == BGCOLOR_STATE_SYMBOL);
+
+			if (!value->IsInt32()) {
+				ThrowException(Exception::TypeError(
+					String::New("bgcolor should be of integer value")
+				));
+			}
+			
+			win->panel()->setBgcolor((short)value->Int32Value());
+		}
+
 		ncWindow() : EventEmitter() {
 			panel_ = NULL;
 			this->init();
@@ -1474,13 +1566,14 @@ class ncWindow : public EventEmitter {
 			if (revents & EV_READ) {
 				HandleScope scope;
 
-				char chr;
+				int chr;
 				string tmp;
 				while ((chr = this->panel()->getch()) != ERR) {
 					tmp.clear();
-					tmp += chr;
-					Local<Value> vChr[1];
+					tmp += (char)chr;
+					Local<Value> vChr[2];
 					vChr[0] = String::New(tmp.c_str());
+					vChr[0] = Integer::New(chr);
 					Emit(inputChar_symbol, 1, vChr);
 
 					// Handle backspace. On my machine the backspace key was set to the bell (^G) ??
@@ -1488,15 +1581,13 @@ class ncWindow : public EventEmitter {
 						this->panel()->delch();
 						if (curInput_.length() > 0)
 							curInput_.erase(curInput_.length()-1);
-					} else {
-						if (chr == '\n' || chr == '\r') {
-							Local<Value> vLine[1];
-							vLine[0] = String::New(curInput_.c_str());
-							Emit(inputLine_symbol, 1, vLine);
-							curInput_.clear();
-						} else
-							curInput_ += tmp;
-					}
+					} else if (chr == '\n' || chr == '\r') {
+						Local<Value> vLine[1];
+						vLine[0] = String::New(curInput_.c_str());
+						Emit(inputLine_symbol, 1, vLine);
+						curInput_.clear();
+					} else if ((chr >= 32 && chr <= 126) || chr == 9)
+						curInput_ += tmp;
 				}
 			}
 		}
