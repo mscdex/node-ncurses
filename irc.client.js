@@ -81,6 +81,11 @@ var channel = "#node.js";
 var realname = "ncursestest";
 var username = "ncursestest";
 
+// Misc IRC client info
+var client_name = "Ncurses_IRC_client";
+var client_ver = "0.1";
+var client_env = "Node.JS";
+
 // Setup colors
 var COLOR_JOIN = win.colorPair(2);
 var COLOR_PART = win.colorPair(3);
@@ -106,9 +111,15 @@ client.addListener('001', function() { // server 'welcome message' event
 	this.send('JOIN', channel);
 });
 
-var onJoinChan = function(prefix, usr, chnl, topic) { appendLine("Joined channel " + chnl); updateTopic("[" + chnl + "] " + topic); };
-client.addListener('331', onJoinChan); // successful join, 'no topic set' event
-client.addListener('332', onJoinChan); // successful join, 'topic set' event
+client.addListener('331', function(prefix, usr, chnl) { // successful join, 'no topic set' event
+	appendLine("Joined channel " + chnl);
+	updateTopic("[" + chnl + "]");	
+});
+
+client.addListener('332', function(prefix, usr, chnl, topic) { // successful join, 'topic set' event
+	appendLine("Joined channel " + chnl);
+	updateTopic("[" + chnl + "] " + topic );
+});
 
 client.addListener('JOIN', function(prefix) {
 	appendLine(irc.user(prefix) + " has joined the channel", true, COLOR_JOIN);
@@ -127,15 +138,25 @@ client.addListener('DISCONNECT', function() {
 	setTimeout(cleanup(), 3000);
 });
 
-client.addListener('PRIVMSG', function(prefix, from, text) {
-	if (text.charCodeAt(0) == 1) {
+client.addListener('PRIVMSG', function(prefix, to, text) {
+	if (text.charCodeAt(0) == 1 && text.charCodeAt(text.length-1) == 1) {
 		// CTCP message
 		var payload = text.substring(1, text.length-1);
 		if (payload.substr(0, 6) == "ACTION")
 			appendLine("* " + irc.user(prefix) + " " + payload.substr(7));
+		else if (payload == "TIME") {
+			var curTime = new Date(), dow = curTime.getDay(), day = curTime.getDate(), month = curTime.getMonth(), year = curTime.getFullYear(),
+			    hours = curTime.getHours(), mins = curTime.getMinutes(), secs = curTime.getSeconds(), tz = curTime.toString().replace(/^.*\(([^)]+)\)$/, '$1');
+			var strTime = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].slice(dow, (dow == 6 ? dow : dow+1)).toString()
+						  + " " + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].slice(month, (month == 11 ? month : month+1)).toString()
+						  + " " + (day < 10 ? "0" : "") + day + " " + (hours < 10 ? "0" : "") + hours + ":" + (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs
+						  + " " + year + " " + tz.toUpperCase();
+			client.send('NOTICE', irc.user(prefix), ':' + String.fromCharCode(1) + "TIME " + strTime + String.fromCharCode(1));
+		} else if (payload == "VERSION")
+			client.send('NOTICE', irc.user(prefix), ':' + String.fromCharCode(1) + "VERSION " + client_name + " " + client_ver + " " + client_env + String.fromCharCode(1));
 		else
-			appendLine("CTCP payload: " + payload);
-	} else if (from[0] == "#")
+			appendLine("Unknown CTCP payload: " + payload);
+	} else if (to[0] == "#")
 		appendLine("<" + irc.user(prefix) + ">: " + text);
 	else
 		appendLine("from(" + irc.user(prefix) + "): " + text);
