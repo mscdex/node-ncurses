@@ -61,7 +61,7 @@ class MyPanel : public NCursesPanel {
 			// Set non-blocking mode and tell ncurses we want to receive one character at a time instead of one line at a time
 			::nodelay(w, true);
 			::nocbreak();
-			::halfdelay(20);
+			::halfdelay(1);
 
 			// Only setup the default palette once, as to not override any possible palette changes made by the user later on
 			if (w == ::stdscr) {
@@ -146,6 +146,9 @@ class MyPanel : public NCursesPanel {
 				return back;
 			else
 				return -1;
+		}
+		void resetScreen() {
+			endwin();
 		}
 };
 
@@ -247,6 +250,7 @@ class ncWindow : public EventEmitter {
 			NODE_SET_PROTOTYPE_METHOD(t, "standout", Standout);
 
 			NODE_SET_PROTOTYPE_METHOD(t, "colorPair", Colorpair);
+			NODE_SET_PROTOTYPE_METHOD(t, "resetScreen", Resetscreen);
 			
 			// Terminal settings
 			t->PrototypeTemplate()->SetAccessor(ECHO_STATE_SYMBOL, EchoStateGetter, EchoStateSetter);
@@ -1335,6 +1339,15 @@ class ncWindow : public EventEmitter {
 			}
 
 			return scope.Close(Integer::New(ret));
+		}
+
+		static Handle<Value> Resetscreen (const Arguments& args) {
+			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			HandleScope scope;
+			
+			win->panel()->resetScreen();
+
+			return Undefined();
 		}
 
 		// Getters/Setters
