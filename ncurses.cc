@@ -41,6 +41,7 @@ static Persistent<String> inputChar_symbol;
 #define HASCOLORS_STATE_SYMBOL String::NewSymbol("hasColors")
 #define NUMCOLORS_STATE_SYMBOL String::NewSymbol("numColors")
 #define MAXCOLORPAIRS_STATE_SYMBOL String::NewSymbol("maxColorPairs")
+#define SHOWCURSOR_STATE_SYMBOL String::NewSymbol("showCursor")
 
 // Extracts a C string from a V8 Utf8Value.
 const char* ToCString(const v8::String::Utf8Value& value) {
@@ -72,7 +73,8 @@ class MyPanel : public NCursesPanel {
 			// Set the default colors on creation (white on black)
 			::wcolor_set(w, 0, NULL);
 		}
-		static bool echoInput;
+		static bool echoInput_;
+		static bool showCursor_;
 	public:
 		MyPanel(int nlines, int ncols, int begin_y = 0, int begin_x = 0) : NCursesPanel(nlines,ncols,begin_y,begin_x) {
 			this->setup();
@@ -85,14 +87,24 @@ class MyPanel : public NCursesPanel {
 				endwin();
 		}
 		static void echo(bool value) {
-			MyPanel::echoInput = value;
-			if (MyPanel::echoInput)
+			MyPanel::echoInput_ = value;
+			if (MyPanel::echoInput_)
 				::echo();
 			else
 				::noecho();
 		}
 		static bool echo() {
-			return MyPanel::echoInput;
+			return MyPanel::echoInput_;
+		}
+		static void showCursor(bool value) {
+			MyPanel::showCursor_ = value;
+			if (MyPanel::showCursor_)
+				::curs_set(1);
+			else
+				::curs_set(0);
+		}
+		static bool showCursor() {
+			return MyPanel::showCursor_;
 		}
 		bool isStdscr() {
 			return (w == ::stdscr);
@@ -148,7 +160,8 @@ class MyPanel : public NCursesPanel {
 		}
 };
 
-bool MyPanel::echoInput = false;
+bool MyPanel::echoInput_ = false;
+bool MyPanel::showCursor_ = true;
 
 class ncWindow : public EventEmitter {
 	public:
@@ -245,7 +258,7 @@ class ncWindow : public EventEmitter {
 			NODE_SET_PROTOTYPE_METHOD(t, "colorPair", Colorpair);
 			NODE_SET_PROTOTYPE_METHOD(t, "resetScreen", Resetscreen);
 			
-			// Terminal settings
+			// Global terminal settings
 			t->PrototypeTemplate()->SetAccessor(ECHO_STATE_SYMBOL, EchoStateGetter, EchoStateSetter);
 			t->PrototypeTemplate()->SetAccessor(LINES_STATE_SYMBOL, LinesStateGetter);
 			t->PrototypeTemplate()->SetAccessor(COLS_STATE_SYMBOL, ColsStateGetter);
@@ -254,6 +267,7 @@ class ncWindow : public EventEmitter {
 			t->PrototypeTemplate()->SetAccessor(HASCOLORS_STATE_SYMBOL, HascolorsStateGetter);
 			t->PrototypeTemplate()->SetAccessor(NUMCOLORS_STATE_SYMBOL, NumcolorsStateGetter);
 			t->PrototypeTemplate()->SetAccessor(MAXCOLORPAIRS_STATE_SYMBOL, MaxcolorpairsStateGetter);
+			t->PrototypeTemplate()->SetAccessor(SHOWCURSOR_STATE_SYMBOL, ShowcursorStateGetter, ShowcursorStateSetter);
 
 			// Panel/Window settings
 			t->PrototypeTemplate()->SetAccessor(HIDDEN_STATE_SYMBOL, HiddenStateGetter);
@@ -1493,6 +1507,30 @@ class ncWindow : public EventEmitter {
 			HandleScope scope;
 			
 			return scope.Close(Integer::New(MyPanel::max_pairs()));
+		}
+
+		static Handle<Value> ShowcursorStateGetter (Local<String> property, const AccessorInfo& info) {
+			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			assert(win);
+			assert(property == SHOWCURSOR_STATE_SYMBOL);
+			
+			HandleScope scope;
+			
+			return scope.Close(Boolean::New(MyPanel::showCursor()));
+		}
+		
+		static void ShowcursorStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
+			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			assert(win);
+			assert(property == SHOWCURSOR_STATE_SYMBOL);
+
+			if (!value->IsBoolean()) {
+				ThrowException(Exception::TypeError(
+					String::New("showCursor should be of Boolean value")
+				));
+			}
+
+			MyPanel::showCursor(value->BooleanValue());
 		}
 
 		ncWindow() : EventEmitter() {
