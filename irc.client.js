@@ -52,34 +52,44 @@ function cleanup() {
 // ============================================================================
 
 var win = new nc.ncWindow();
-win.addListener('inputLine', function (str) {
-	if (str.substr(0, 4) == "/msg") {
-		str = str.substr(5);
-		var recipient = str.substr(0, str.indexOf(' '));
-		var msg = str.substr(str.indexOf(' ')+1);
-		appendLine("to(" + recipient + "): " + msg, null, null, true);
-		client.send('PRIVMSG', recipient, ':' + msg);
-	} else if (str.substr(0, 3) == "/me") {
-		str = str.substr(4);
-		appendLine("* " + nick + " " + str, null, null, true);
-		client.send('PRIVMSG', channel, ':' + String.fromCharCode(1) + "ACTION " + str + String.fromCharCode(1));
-	} else if (str == "/quit") {
-		client.send('QUIT');
-		client.disconnect();
-		cleanup();
-	} else if (!isNaN(str.charCodeAt(0))) {
-		appendLine("<" + nick + ">: " + str, null, null, true);
-		client.send('PRIVMSG', channel, ':' + str);
-	}
+var inputLine = "";
+win.addListener('inputChar', function (chr, intval) {
+	if (intval == consts.BACKSPACE || intval == 7) {
+		win.delch();
+		if (inputLine.length)
+			inputLine = inputLine.substr(0, inputLine.length-1);
+	} else if (chr == "\n") {
+		if (inputLine.substr(0, 4) == "/msg") {
+			inputLine = inputLine.substr(5);
+			var recipient = inputLine.substr(0, inputLine.indexOf(' '));
+			var msg = inputLine.substr(inputLine.indexOf(' ')+1);
+			appendLine("to(" + recipient + "): " + msg, null, null, true);
+			client.send('PRIVMSG', recipient, ':' + msg);
+		} else if (inputLine.substr(0, 3) == "/me") {
+			inputLine = inputLine.substr(4);
+			appendLine("* " + nick + " " + inputLine, null, null, true);
+			client.send('PRIVMSG', channel, ':' + String.fromCharCode(1) + "ACTION " + inputLine + String.fromCharCode(1));
+		} else if (inputLine == "/quit") {
+			client.send('QUIT');
+			client.disconnect();
+			cleanup();
+		} else if (!isNaN(inputLine.charCodeAt(0))) {
+			appendLine("<" + nick + ">: " + inputLine, null, null, true);
+			client.send('PRIVMSG', channel, ':' + inputLine);
+		}
+		inputLine = "";
+	} else
+		inputLine += chr;
 });
 
 // Connection info
-var nick = "ncursestest";
+var nick = "iheartnodejs";
 var server = "irc.freenode.net";
+//var server = "10.1.1.3";
 var port = 6667;
 var channel = "#node.js";
-var realname = "ncursestest";
-var username = "ncursestest";
+var realname = "nodejs";
+var username = "nodejs";
 
 // Misc IRC client info
 var client_name = "Ncurses_IRC_client";

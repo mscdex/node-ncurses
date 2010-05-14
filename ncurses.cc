@@ -10,9 +10,6 @@
 #include <node.h>
 #include <node_events.h>
 
-//#include <fstream>
-//#include <stdio.h>
-
 #include <string>
 #include <assert.h>
 #include <stdlib.h>
@@ -26,7 +23,6 @@ static int stdin_fd = -1;
 static int stdout_fd = -1;
 
 static Persistent<String> inputChar_symbol;
-static Persistent<String> inputLine_symbol;
 #define ECHO_STATE_SYMBOL String::NewSymbol("echo")
 #define LINES_STATE_SYMBOL String::NewSymbol("lines")
 #define COLS_STATE_SYMBOL String::NewSymbol("cols")
@@ -165,7 +161,6 @@ class ncWindow : public EventEmitter {
 			t->InstanceTemplate()->SetInternalFieldCount(1);
 			
 			inputChar_symbol = NODE_PSYMBOL("inputChar");
-			inputLine_symbol = NODE_PSYMBOL("inputLine");
 
 			/* Panel-specific methods */
 			NODE_SET_PROTOTYPE_METHOD(t, "hide", Hide);
@@ -242,9 +237,7 @@ class ncWindow : public EventEmitter {
 			NODE_SET_PROTOTYPE_METHOD(t, "idcok", Idcok);
 			NODE_SET_PROTOTYPE_METHOD(t, "leaveok", Leaveok);
 			NODE_SET_PROTOTYPE_METHOD(t, "syncok", Syncok);
-			//NODE_SET_PROTOTYPE_METHOD(t, "flushok", Flushok);
 			NODE_SET_PROTOTYPE_METHOD(t, "immedok", Immedok);
-			//NODE_SET_PROTOTYPE_METHOD(t, "initrflush", Initrflush);
 			NODE_SET_PROTOTYPE_METHOD(t, "keypad", Keypad);
 			NODE_SET_PROTOTYPE_METHOD(t, "meta", Meta);
 			NODE_SET_PROTOTYPE_METHOD(t, "standout", Standout);
@@ -315,31 +308,6 @@ class ncWindow : public EventEmitter {
 				panel_ = NULL;
 			}
 		}
-
-		/* Debug logging functions */
-		/*static void log(const char* message) {
-			ofstream outfile("log", ios::out | ios::app);
-			outfile << message << endl;
-			outfile.close();
-		}
-
-		static void log(int val) {
-			ofstream outfile("log", ios::out | ios::app);
-			outfile << val << endl;
-			outfile.close();
-		}
-		
-		static void log(char val) {
-			ofstream outfile("log", ios::out | ios::app);
-			outfile << val << endl;
-			outfile.close();
-		}
-
-		static string int2str(int val) {
-			char buf[256];
-			sprintf(buf, "%i", val);
-			return string(buf);
-		}*/
 
 	protected:
 		static Handle<Value> New (const Arguments& args) {
@@ -1225,22 +1193,6 @@ class ncWindow : public EventEmitter {
 			return scope.Close(Integer::New(ret));
 		}
 
-		/*static Handle<Value> Flushok (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
-			HandleScope scope;
-			
-			int ret;
-			if (args.Length() == 1 && args[0]->IsBoolean())
-				ret = win->panel()->flushok(args[0]->BooleanValue());
-			else {
-				return ThrowException(Exception::Error(
-					String::New("Invalid number and/or types of arguments")
-				));
-			}
-
-			return scope.Close(Integer::New(ret));
-		}*/
-
 		static Handle<Value> Immedok (const Arguments& args) {
 			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
 			HandleScope scope;
@@ -1255,22 +1207,6 @@ class ncWindow : public EventEmitter {
 
 			return Undefined();
 		}
-
-		/*static Handle<Value> Initrflush (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
-			HandleScope scope;
-			
-			int ret;
-			if (args.Length() == 1 && args[0]->IsBoolean())
-				ret = win->panel()->initrflush(args[0]->BooleanValue());
-			else {
-				return ThrowException(Exception::Error(
-					String::New("Invalid number and/or types of arguments")
-				));
-			}
-
-			return scope.Close(Integer::New(ret));
-		}*/
 
 		static Handle<Value> Keypad (const Arguments& args) {
 			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
@@ -1587,27 +1523,14 @@ class ncWindow : public EventEmitter {
 				HandleScope scope;
 
 				int chr;
-				string tmp;
+				char tmp[2];
+				tmp[1] = 0;
 				while ((chr = this->panel()->getch()) != ERR) {
-					tmp.clear();
-					tmp += (char)chr;
+					tmp[0] = chr;
 					Local<Value> vChr[2];
-					vChr[0] = String::New(tmp.c_str());
-					vChr[0] = Integer::New(chr);
-					Emit(inputChar_symbol, 1, vChr);
-
-					// Handle backspace. On my machine the backspace key was set to the bell (^G) ??
-					if (chr == KEY_BACKSPACE || chr == 7) {
-						this->panel()->delch();
-						if (curInput_.length() > 0)
-							curInput_.erase(curInput_.length()-1);
-					} else if (chr == '\n' || chr == '\r') {
-						Local<Value> vLine[1];
-						vLine[0] = String::New(curInput_.c_str());
-						Emit(inputLine_symbol, 1, vLine);
-						curInput_.clear();
-					} else if ((chr >= 32 && chr <= 126) || chr == 9)
-						curInput_ += tmp;
+					vChr[0] = String::New(tmp);
+					vChr[1] = Integer::New(chr);
+					Emit(inputChar_symbol, 2, vChr);
 				}
 			}
 		}
@@ -1619,8 +1542,6 @@ class ncWindow : public EventEmitter {
 		}
 		
 		MyPanel *panel_;
-
-		string curInput_;
 		ev_io read_watcher_;
 };
 
