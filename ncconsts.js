@@ -1,7 +1,7 @@
 /* Constants ==================================================================== */
-var keys = {};
-var colors = {};
-var attrs = {};
+var keys = {}; // Keyboard key attributes
+var colors = {}; // Color attributes
+var attrs = {}; // Other window attributes
 
 keys['BREAK'] = 0x101;    /* break key */
 keys['DOWN'] = 0x102;    /* down arrow */

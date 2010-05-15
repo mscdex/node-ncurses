@@ -10,7 +10,6 @@
 #include <node.h>
 #include <node_events.h>
 
-#include <string>
 #include <assert.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -23,11 +22,18 @@ static int stdin_fd = -1;
 static int stdout_fd = -1;
 
 static Persistent<String> inputChar_symbol;
+
 #define ECHO_STATE_SYMBOL String::NewSymbol("echo")
+#define SHOWCURSOR_STATE_SYMBOL String::NewSymbol("showCursor")
 #define LINES_STATE_SYMBOL String::NewSymbol("lines")
 #define COLS_STATE_SYMBOL String::NewSymbol("cols")
 #define TABSIZE_STATE_SYMBOL String::NewSymbol("tabsize")
 #define HASMOUSE_STATE_SYMBOL String::NewSymbol("hasMouse")
+#define HASCOLORS_STATE_SYMBOL String::NewSymbol("hasColors")
+#define NUMCOLORPAIRS_STATE_SYMBOL String::NewSymbol("numColorPairs")
+#define MAXCOLORPAIRS_STATE_SYMBOL String::NewSymbol("maxColorPairs")
+
+#define BKGD_STATE_SYMBOL String::NewSymbol("bkgd")
 #define HIDDEN_STATE_SYMBOL String::NewSymbol("hidden")
 #define HEIGHT_STATE_SYMBOL String::NewSymbol("height")
 #define WIDTH_STATE_SYMBOL String::NewSymbol("width")
@@ -37,11 +43,7 @@ static Persistent<String> inputChar_symbol;
 #define CURY_STATE_SYMBOL String::NewSymbol("cury")
 #define MAXX_STATE_SYMBOL String::NewSymbol("maxx")
 #define MAXY_STATE_SYMBOL String::NewSymbol("maxy")
-#define BKGD_STATE_SYMBOL String::NewSymbol("bkgd")
-#define HASCOLORS_STATE_SYMBOL String::NewSymbol("hasColors")
-#define NUMCOLORS_STATE_SYMBOL String::NewSymbol("numColors")
-#define MAXCOLORPAIRS_STATE_SYMBOL String::NewSymbol("maxColorPairs")
-#define SHOWCURSOR_STATE_SYMBOL String::NewSymbol("showCursor")
+#define WINTOUCHED_STATE_SYMBOL String::NewSymbol("touched")
 
 // Extracts a C string from a V8 Utf8Value.
 const char* ToCString(const v8::String::Utf8Value& value) {
@@ -70,7 +72,7 @@ class MyPanel : public NCursesPanel {
 				::init_pair(6, COLOR_CYAN, COLOR_BLACK);
 			}
 			
-			// Set the default colors on creation (white on black)
+			// Set the window's default color pair (white on black)
 			::wcolor_set(w, 0, NULL);
 		}
 		static bool echoInput_;
@@ -115,7 +117,7 @@ class MyPanel : public NCursesPanel {
 		static bool has_colors() {
 			return ::has_colors();
 		}
-		static int num_colors() {
+		static int num_pairs() {
 			return COLORS;
 		}
 		static int max_pairs() {
@@ -175,7 +177,22 @@ class ncWindow : public EventEmitter {
 			
 			inputChar_symbol = NODE_PSYMBOL("inputChar");
 
+			/* Global/Terminal functions */
+			NODE_SET_PROTOTYPE_METHOD(t, "colorPair", Colorpair);
+			NODE_SET_PROTOTYPE_METHOD(t, "resetScreen", Resetscreen);
+
 			/* Panel-specific methods */
+			// TODO: color_set?, chgat, overlay, overwrite, copywin
+			NODE_SET_PROTOTYPE_METHOD(t, "clearok", Clearok);
+			NODE_SET_PROTOTYPE_METHOD(t, "scrollok", Scrollok);
+			NODE_SET_PROTOTYPE_METHOD(t, "idlok", Idlok);
+			NODE_SET_PROTOTYPE_METHOD(t, "idcok", Idcok);
+			NODE_SET_PROTOTYPE_METHOD(t, "leaveok", Leaveok);
+			NODE_SET_PROTOTYPE_METHOD(t, "syncok", Syncok);
+			NODE_SET_PROTOTYPE_METHOD(t, "immedok", Immedok);
+			NODE_SET_PROTOTYPE_METHOD(t, "keypad", Keypad);
+			NODE_SET_PROTOTYPE_METHOD(t, "meta", Meta);
+			NODE_SET_PROTOTYPE_METHOD(t, "standout", Standout);
 			NODE_SET_PROTOTYPE_METHOD(t, "hide", Hide);
 			NODE_SET_PROTOTYPE_METHOD(t, "show", Show);
 			NODE_SET_PROTOTYPE_METHOD(t, "top", Top);
@@ -188,88 +205,60 @@ class ncWindow : public EventEmitter {
 			NODE_SET_PROTOTYPE_METHOD(t, "boldframe", Boldframe);
 			NODE_SET_PROTOTYPE_METHOD(t, "label", Label);
 			NODE_SET_PROTOTYPE_METHOD(t, "centertext", Centertext);
-
 			NODE_SET_PROTOTYPE_METHOD(t, "cursor", Move);
-			
-			/* ACS_* character-related methods */
-			NODE_SET_PROTOTYPE_METHOD(t, "addch", Addch);
-			NODE_SET_PROTOTYPE_METHOD(t, "echochar", Echochar);
-			NODE_SET_PROTOTYPE_METHOD(t, "addstr", Addstr);
-			//NODE_SET_PROTOTYPE_METHOD(t, "addchstr", Addchstr);
-			NODE_SET_PROTOTYPE_METHOD(t, "inch", Inch);
-			//NODE_SET_PROTOTYPE_METHOD(t, "inchstr", Inchstr);
-			NODE_SET_PROTOTYPE_METHOD(t, "insch", Insch);
-			
 			NODE_SET_PROTOTYPE_METHOD(t, "insertln", Insertln);
 			NODE_SET_PROTOTYPE_METHOD(t, "insdelln", Insdelln);
 			NODE_SET_PROTOTYPE_METHOD(t, "insstr", Insstr);
-			
 			NODE_SET_PROTOTYPE_METHOD(t, "attron", Attron);
 			NODE_SET_PROTOTYPE_METHOD(t, "attroff", Attroff);
 			NODE_SET_PROTOTYPE_METHOD(t, "attrset", Attrset);
 			NODE_SET_PROTOTYPE_METHOD(t, "attrget", Attrget);
-
-			// TODO: color_set, chgat
-			/*NODE_SET_PROTOTYPE_METHOD(t, "color_set", Color_set);
-			NODE_SET_PROTOTYPE_METHOD(t, "chgat", Chgat);*/
-			
 			NODE_SET_PROTOTYPE_METHOD(t, "box", Box);
 			NODE_SET_PROTOTYPE_METHOD(t, "border", Border);
 			NODE_SET_PROTOTYPE_METHOD(t, "hline", Hline);
 			NODE_SET_PROTOTYPE_METHOD(t, "vline", Vline);
-
 			NODE_SET_PROTOTYPE_METHOD(t, "erase", Erase);
 			NODE_SET_PROTOTYPE_METHOD(t, "clear", Clear);
 			NODE_SET_PROTOTYPE_METHOD(t, "clrtobot", Clrtobot);
 			NODE_SET_PROTOTYPE_METHOD(t, "clrtoeol", Clrtoeol);
 			NODE_SET_PROTOTYPE_METHOD(t, "delch", Delch);
 			NODE_SET_PROTOTYPE_METHOD(t, "deleteln", Deleteln);
-
 			NODE_SET_PROTOTYPE_METHOD(t, "scroll", Scroll);
 			NODE_SET_PROTOTYPE_METHOD(t, "setscrreg", Setscrreg);
-			NODE_SET_PROTOTYPE_METHOD(t, "touchline", Touchline); // one line
-			NODE_SET_PROTOTYPE_METHOD(t, "touchwin", Touchwin);
-			NODE_SET_PROTOTYPE_METHOD(t, "untouchwin", Untouchwin);
-			NODE_SET_PROTOTYPE_METHOD(t, "touchln", Touchln); // multiple lines
+			NODE_SET_PROTOTYPE_METHOD(t, "touchlines", Touchln); // multiple lines
 			NODE_SET_PROTOTYPE_METHOD(t, "is_linetouched", Is_linetouched);
-			NODE_SET_PROTOTYPE_METHOD(t, "is_wintouched", Is_wintouched);
 			NODE_SET_PROTOTYPE_METHOD(t, "redrawln", Redrawln);
+			NODE_SET_PROTOTYPE_METHOD(t, "touch", Touchwin);
+			NODE_SET_PROTOTYPE_METHOD(t, "untouch", Untouchwin);
+			NODE_SET_PROTOTYPE_METHOD(t, "resize", Wresize);
+			NODE_SET_PROTOTYPE_METHOD(t, "print", Print);
+			NODE_SET_PROTOTYPE_METHOD(t, "addstr", Addstr);
+			NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
 			NODE_SET_PROTOTYPE_METHOD(t, "syncdown", Syncdown);
 			NODE_SET_PROTOTYPE_METHOD(t, "syncup", Syncup);
 			NODE_SET_PROTOTYPE_METHOD(t, "cursyncup", Cursyncup);
 
-			// TODO: overlay, overwrite, copywin
-			NODE_SET_PROTOTYPE_METHOD(t, "resize", Wresize);
+			/* Attribute-related window functions */
+			NODE_SET_PROTOTYPE_METHOD(t, "addch", Addch);
+			NODE_SET_PROTOTYPE_METHOD(t, "echochar", Echochar);
+			NODE_SET_PROTOTYPE_METHOD(t, "inch", Inch);
+			NODE_SET_PROTOTYPE_METHOD(t, "insch", Insch);
+			//NODE_SET_PROTOTYPE_METHOD(t, "addchstr", Addchstr);
+			//NODE_SET_PROTOTYPE_METHOD(t, "inchstr", Inchstr);
 			
-			NODE_SET_PROTOTYPE_METHOD(t, "print", Print);
-			NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
-
-			NODE_SET_PROTOTYPE_METHOD(t, "clearok", Clearok);
-			NODE_SET_PROTOTYPE_METHOD(t, "scrollok", Scrollok);
-			NODE_SET_PROTOTYPE_METHOD(t, "idlok", Idlok);
-			NODE_SET_PROTOTYPE_METHOD(t, "idcok", Idcok);
-			NODE_SET_PROTOTYPE_METHOD(t, "leaveok", Leaveok);
-			NODE_SET_PROTOTYPE_METHOD(t, "syncok", Syncok);
-			NODE_SET_PROTOTYPE_METHOD(t, "immedok", Immedok);
-			NODE_SET_PROTOTYPE_METHOD(t, "keypad", Keypad);
-			NODE_SET_PROTOTYPE_METHOD(t, "meta", Meta);
-			NODE_SET_PROTOTYPE_METHOD(t, "standout", Standout);
-
-			NODE_SET_PROTOTYPE_METHOD(t, "colorPair", Colorpair);
-			NODE_SET_PROTOTYPE_METHOD(t, "resetScreen", Resetscreen);
-			
-			// Global terminal settings
+			/* Global/Terminal properties */
 			t->PrototypeTemplate()->SetAccessor(ECHO_STATE_SYMBOL, EchoStateGetter, EchoStateSetter);
+			t->PrototypeTemplate()->SetAccessor(SHOWCURSOR_STATE_SYMBOL, ShowcursorStateGetter, ShowcursorStateSetter);
 			t->PrototypeTemplate()->SetAccessor(LINES_STATE_SYMBOL, LinesStateGetter);
 			t->PrototypeTemplate()->SetAccessor(COLS_STATE_SYMBOL, ColsStateGetter);
 			t->PrototypeTemplate()->SetAccessor(TABSIZE_STATE_SYMBOL, TabsizeStateGetter);
 			t->PrototypeTemplate()->SetAccessor(HASMOUSE_STATE_SYMBOL, HasmouseStateGetter);
 			t->PrototypeTemplate()->SetAccessor(HASCOLORS_STATE_SYMBOL, HascolorsStateGetter);
-			t->PrototypeTemplate()->SetAccessor(NUMCOLORS_STATE_SYMBOL, NumcolorsStateGetter);
+			t->PrototypeTemplate()->SetAccessor(NUMCOLORPAIRS_STATE_SYMBOL, NumcolorpairsStateGetter);
 			t->PrototypeTemplate()->SetAccessor(MAXCOLORPAIRS_STATE_SYMBOL, MaxcolorpairsStateGetter);
-			t->PrototypeTemplate()->SetAccessor(SHOWCURSOR_STATE_SYMBOL, ShowcursorStateGetter, ShowcursorStateSetter);
 
-			// Panel/Window settings
+			/* Window properties */
+			t->PrototypeTemplate()->SetAccessor(BKGD_STATE_SYMBOL, BkgdStateGetter, BkgdStateSetter);
 			t->PrototypeTemplate()->SetAccessor(HIDDEN_STATE_SYMBOL, HiddenStateGetter);
 			t->PrototypeTemplate()->SetAccessor(HEIGHT_STATE_SYMBOL, HeightStateGetter);
 			t->PrototypeTemplate()->SetAccessor(WIDTH_STATE_SYMBOL, WidthStateGetter);
@@ -279,7 +268,7 @@ class ncWindow : public EventEmitter {
 			t->PrototypeTemplate()->SetAccessor(CURY_STATE_SYMBOL, CuryStateGetter);
 			t->PrototypeTemplate()->SetAccessor(MAXX_STATE_SYMBOL, MaxxStateGetter);
 			t->PrototypeTemplate()->SetAccessor(MAXY_STATE_SYMBOL, MaxyStateGetter);
-			t->PrototypeTemplate()->SetAccessor(BKGD_STATE_SYMBOL, BkgdStateGetter, BkgdStateSetter);
+			t->PrototypeTemplate()->SetAccessor(WINTOUCHED_STATE_SYMBOL, WintouchedStateGetter);
 			
 			target->Set(String::NewSymbol("ncWindow"), t->GetFunction());
 		}
@@ -958,7 +947,7 @@ class ncWindow : public EventEmitter {
 			return scope.Close(Integer::New(ret));
 		}
 
-		static Handle<Value> Touchline (const Arguments& args) {
+		/*static Handle<Value> Touchline (const Arguments& args) {
 			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
 			HandleScope scope;
 			
@@ -972,7 +961,7 @@ class ncWindow : public EventEmitter {
 			}
 
 			return scope.Close(Integer::New(ret));
-		}
+		}*/
 
 		static Handle<Value> Touchwin (const Arguments& args) {
 			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
@@ -1022,15 +1011,6 @@ class ncWindow : public EventEmitter {
 					String::New("Invalid number and/or types of arguments")
 				));
 			}
-
-			return scope.Close(Boolean::New(ret));
-		}
-
-		static Handle<Value> Is_wintouched (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
-			HandleScope scope;
-			
-			bool ret = win->panel()->is_wintouched();
 
 			return scope.Close(Boolean::New(ret));
 		}
@@ -1300,7 +1280,7 @@ class ncWindow : public EventEmitter {
 			return Undefined();
 		}
 
-		// Getters/Setters
+		// -- Getters/Setters -----------------------------------------------------------------------
 		static Handle<Value> EchoStateGetter (Local<String> property, const AccessorInfo& info) {
 			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
 			assert(win);
@@ -1323,6 +1303,30 @@ class ncWindow : public EventEmitter {
 			}
 
 			MyPanel::echo(value->BooleanValue());
+		}
+
+		static Handle<Value> ShowcursorStateGetter (Local<String> property, const AccessorInfo& info) {
+			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			assert(win);
+			assert(property == SHOWCURSOR_STATE_SYMBOL);
+			
+			HandleScope scope;
+			
+			return scope.Close(Boolean::New(MyPanel::showCursor()));
+		}
+		
+		static void ShowcursorStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
+			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			assert(win);
+			assert(property == SHOWCURSOR_STATE_SYMBOL);
+
+			if (!value->IsBoolean()) {
+				ThrowException(Exception::TypeError(
+					String::New("showCursor should be of Boolean value")
+				));
+			}
+
+			MyPanel::showCursor(value->BooleanValue());
 		}
 
 		static Handle<Value> LinesStateGetter (Local<String> property, const AccessorInfo& info) {
@@ -1489,14 +1493,14 @@ class ncWindow : public EventEmitter {
 			return scope.Close(Boolean::New(MyPanel::has_colors()));
 		}
 
-		static Handle<Value> NumcolorsStateGetter (Local<String> property, const AccessorInfo& info) {
+		static Handle<Value> NumcolorpairsStateGetter (Local<String> property, const AccessorInfo& info) {
 			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
 			assert(win);
-			assert(property == NUMCOLORS_STATE_SYMBOL);
+			assert(property == NUMCOLORPAIRS_STATE_SYMBOL);
 			
 			HandleScope scope;
 			
-			return scope.Close(Integer::New(MyPanel::num_colors()));
+			return scope.Close(Integer::New(MyPanel::num_pairs()));
 		}
 
 		static Handle<Value> MaxcolorpairsStateGetter (Local<String> property, const AccessorInfo& info) {
@@ -1509,28 +1513,14 @@ class ncWindow : public EventEmitter {
 			return scope.Close(Integer::New(MyPanel::max_pairs()));
 		}
 
-		static Handle<Value> ShowcursorStateGetter (Local<String> property, const AccessorInfo& info) {
+		static Handle<Value> WintouchedStateGetter (Local<String> property, const AccessorInfo& info) {
 			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
 			assert(win);
-			assert(property == SHOWCURSOR_STATE_SYMBOL);
+			assert(property == WINTOUCHED_STATE_SYMBOL);
 			
 			HandleScope scope;
 			
-			return scope.Close(Boolean::New(MyPanel::showCursor()));
-		}
-		
-		static void ShowcursorStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
-			assert(win);
-			assert(property == SHOWCURSOR_STATE_SYMBOL);
-
-			if (!value->IsBoolean()) {
-				ThrowException(Exception::TypeError(
-					String::New("showCursor should be of Boolean value")
-				));
-			}
-
-			MyPanel::showCursor(value->BooleanValue());
+			return scope.Close(Boolean::New(win->panel()->is_wintouched()));
 		}
 
 		ncWindow() : EventEmitter() {
