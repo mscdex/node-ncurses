@@ -111,7 +111,7 @@ ncWindow Functions
 * **insdelln**([Integer=1]) - _Result_ - If the passed in value is greater than zero, that many rows will be inserted above the current row. If the passed in value is less than zero, that many rows are deleted, beginning with the current row.
 
 * **insstr**(String[, Integer=-1]) - _Result_ - Insert the string into the window before the current cursor position. Insert stops at the end of the string or when the limit indicated by the second parameter is reached. If the second parameter is negative, the limit is ignored.
-       * **insstr**(Integer, Integer, String[, Integer=-1]) - _Result_ - Moves the cursor to the row and column specified by the first two parameters respectively, then calls the version of **insstr**() above with the rest of the parameters.
+    * **insstr**(Integer, Integer, String[, Integer=-1]) - _Result_ - Moves the cursor to the row and column specified by the first two parameters respectively, then calls the version of **insstr**() above with the rest of the parameters.
 
 * **attron**(Attributes) - _Result_ - Switch on the specified window attributes.
 
