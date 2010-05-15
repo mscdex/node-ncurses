@@ -138,7 +138,7 @@ ncWindow Functions
 * **clrtoeol**() - _Result_ - Clears to the end of the current row.
 
 * **delch**() - _Result_ - Deletes the character under the cursor.
-       * **delch**(Integer, Integer) - _Result_ - Moves the cursor to the row and column specified by the first two parameters respectively, then calls the version of **delch**() above with the rest of the parameters.
+    * **delch**(Integer, Integer) - _Result_ - Moves the cursor to the row and column specified by the first two parameters respectively, then calls the version of **delch**() above with the rest of the parameters.
 
 * **deleteln**() - _Result_ - Deletes the current row.
 
@@ -159,10 +159,10 @@ ncWindow Functions
 * **resize**(Integer, Integer) - _Result_ - Resizes the window to the specified number of rows and columns respectively.
 
 * **print**(String) - _Result_ - Writes the specified string at the current cursor position.
-       * **print**(Integer, Integer, String) - _Result_ - Moves the cursor to the row and column specified by the first two parameters respectively, then calls the version of **print**() above with the rest of the parameters.
+    * **print**(Integer, Integer, String) - _Result_ - Moves the cursor to the row and column specified by the first two parameters respectively, then calls the version of **print**() above with the rest of the parameters.
 
 * **addstr**(String[, Integer=-1]) - _Result_ - Writes the specified string at the current cursor position. Writing stops at the end of the string or when the limit indicated by the second parameter is reached. If the second parameter is negative, the limit is ignored.
-       * **addstr**(Integer, Integer, String[, Integer=-1]) - _Result_ - Moves the cursor to the row and column specified by the first two parameters respectively, then calls the version of **addstr**() above with the rest of the parameters.
+    * **addstr**(Integer, Integer, String[, Integer=-1]) - _Result_ - Moves the cursor to the row and column specified by the first two parameters respectively, then calls the version of **addstr**() above with the rest of the parameters.
 
 * **close**() - _Result_ - Destroys the window and any of its children. **Only** call this **once** and when you are completely finished with the window.
 
