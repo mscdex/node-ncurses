@@ -9,9 +9,10 @@ Requirements
 
 * [node.js](http://nodejs.org/) -- tested with v0.1.94
 * ncurses (with the C++ binding built and installed) and ncurses development headers installed -- tested with 5.7
-       * If you don't have ncurses++ installed, you'll get build errors including:
 
-            ../ncurses.cc:9:21: error: cursesp.h: No such file or directory
+If you don't have ncurses++ installed, you'll get build errors including:
+
+    ../ncurses.cc:9:21: error: cursesp.h: No such file or directory
 
 To build node-curses:
 
