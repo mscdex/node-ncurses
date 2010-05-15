@@ -83,13 +83,12 @@ win.addListener('inputChar', function (chr, intval) {
 });
 
 // Connection info
-var nick = "iheartnodejs";
+var nick = "ncursestest";
 var server = "irc.freenode.net";
-//var server = "10.1.1.3";
 var port = 6667;
 var channel = "#node.js";
-var realname = "nodejs";
-var username = "nodejs";
+var realname = "ncursestest";
+var username = "ncursestest";
 
 // Misc IRC client info
 var client_name = "Ncurses_IRC_client";

@@ -1,9 +1,14 @@
 #ifndef CTRL
-#define CTRL(x) ((x) & 0x1f)
+#  define CTRL(x) ((x) & 0x1f)
 #endif
 
 #ifndef NULL
-#define NULL 0
+#  define NULL 0
+#endif
+
+#ifndef STDIN_FILNO
+#  define STDIN_FILENO  0
+#  define STDOUT_FILENO 1
 #endif
 
 #include <cursesp.h>
