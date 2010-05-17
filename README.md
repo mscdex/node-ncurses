@@ -41,7 +41,7 @@ node-ncurses exposes only one class: **ncWindow**.
 * _Attributes_ is an unsigned integer used as a bitmask for holding window attributes (see ncconsts.js for the available values).
 
 * _ACS_Character_ is a special character used when dealing with line graphics. These are automatically determined at runtime by ncurses and thus cannot be defined as constants. Instead, they are accessible statically via the ncWindow class after at least one window has been created (so that ncurses has initialized this special character set). See the **Additional notes** at the bottom for a list of the available characters.
-    * An _ACS_Character_ can currently be retrieved by using the ACS property of an ncWindow instance (i.e. "win = new ncWindow(); win.hline(win.cols, win.ACS.DIAMOND);")
+    * An _ACS_Character_ can currently be retrieved by using the ACS property of an ncWindow instance (i.e. "var win = new ncWindow(); win.hline(win.cols, win.ACS.DIAMOND);")
 
 
 ncWindow Events
@@ -182,6 +182,7 @@ ncWindow Properties
 * **hasColors** - _Boolean_ [Read-only] - Indicates whether the terminal supports colors
 * **hasColors** - _Boolean_ [Read-only] - Indicates whether the terminal supports colors
 * **maxColorPairs** - _Integer_ [Read-only] - The maximum number of foreground-background color pairs supported by the terminal
+* **ACS** - _Array_ [Read-only] - Contains a hash of all of the available ACS characters (for line graphics) described in the **Additional notes** section of this README
 
 
 #### Window-specific
