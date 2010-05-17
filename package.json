@@ -1,0 +1,13 @@
+{ "name" : "ncurses"
+, "version" : "0.0.1"
+, "author" : "Brian White <mscdex@gmail.com>"
+, "description" : "An ncurses binding for node.js"
+, "scripts" : { "preinstall" : "node-waf configure build" }
+, "main" : "./ncurses"
+, "engines" : { "node" : ">0.1.93" }
+, "licenses" :
+  [ { "type" : "MIT"
+    , "url" : "http://github.com/mscdex/node-ncurses/raw/master/LICENSE"
+    }
+  ]
+}
