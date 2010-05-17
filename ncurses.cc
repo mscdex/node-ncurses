@@ -467,13 +467,16 @@ class ncWindow : public EventEmitter {
 			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
 			HandleScope scope;
 			
-			if (args.Length() == 0)
+			if (args.Length() == 0) {
 				win->panel()->frame(NULL, NULL);
-			else if (args.Length() == 1 && args[0]->IsString())
-				win->panel()->frame(ToCString(String::Utf8Value(args[0]->ToString())), NULL);
-			else if (args.Length() == 2 && args[0]->IsString() && args[1]->IsString())
-				win->panel()->frame(ToCString(String::Utf8Value(args[0]->ToString())), ToCString(String::Utf8Value(args[1]->ToString())));
-			else {
+			} else if (args.Length() == 1 && args[0]->IsString()) {
+				String::Utf8Value str(args[0]->ToString());
+			  win->panel()->frame(ToCString(str), NULL);
+			} else if (args.Length() == 2 && args[0]->IsString() && args[1]->IsString()) {
+			  String::Utf8Value str0(args[0]->ToString());
+			  String::Utf8Value str1(args[0]->ToString());
+				win->panel()->frame(ToCString(str0), ToCString(str1));
+			} else {
 				return ThrowException(Exception::Error(
 					String::New("Invalid number and/or types of arguments")
 				));
@@ -486,13 +489,16 @@ class ncWindow : public EventEmitter {
 			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
 			HandleScope scope;
 			
-			if (args.Length() == 0)
+			if (args.Length() == 0) {
 				win->panel()->boldframe(NULL, NULL);
-			else if (args.Length() == 1 && args[0]->IsString())
-				win->panel()->boldframe(ToCString(String::Utf8Value(args[0]->ToString())), NULL);
-			else if (args.Length() == 2 && args[0]->IsString() && args[1]->IsString())
-				win->panel()->boldframe(ToCString(String::Utf8Value(args[0]->ToString())), ToCString(String::Utf8Value(args[1]->ToString())));
-			else {
+			} else if (args.Length() == 1 && args[0]->IsString()) {
+			  String::Utf8Value str(args[0]->ToString());
+				win->panel()->boldframe(ToCString(str), NULL);
+			} else if (args.Length() == 2 && args[0]->IsString() && args[1]->IsString()) {
+			  String::Utf8Value str0(args[0]->ToString());
+			  String::Utf8Value str1(args[0]->ToString());
+				win->panel()->boldframe(ToCString(str0), ToCString(str1));
+			} else {
 				return ThrowException(Exception::Error(
 					String::New("Invalid number and/or types of arguments")
 				));
@@ -505,11 +511,14 @@ class ncWindow : public EventEmitter {
 			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
 			HandleScope scope;
 			
-			if (args.Length() == 1 && args[0]->IsString())
-				win->panel()->label(ToCString(String::Utf8Value(args[0]->ToString())), NULL);
-			else if (args.Length() == 2 && args[0]->IsString() && args[1]->IsString())
-				win->panel()->label(ToCString(String::Utf8Value(args[0]->ToString())), ToCString(String::Utf8Value(args[1]->ToString())));
-			else {
+			if (args.Length() == 1 && args[0]->IsString()) {
+			  String::Utf8Value str(args[0]->ToString());
+				win->panel()->label(ToCString(str), NULL);
+			} else if (args.Length() == 2 && args[0]->IsString() && args[1]->IsString()) {
+			  String::Utf8Value str0(args[0]->ToString());
+			  String::Utf8Value str1(args[1]->ToString());
+				win->panel()->label(ToCString(str0), ToCString(str1));
+			} else {
 				return ThrowException(Exception::Error(
 					String::New("Invalid number and/or types of arguments")
 				));
@@ -522,9 +531,10 @@ class ncWindow : public EventEmitter {
 			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
 			HandleScope scope;
 			
-			if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsString())
-				win->panel()->centertext(args[0]->Int32Value(), ToCString(String::Utf8Value(args[1]->ToString())));
-			else {
+			if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsString()) {
+			  String::Utf8Value str(args[1]->ToString());
+				win->panel()->centertext(args[0]->Int32Value(), ToCString(str));
+			} else {
 				return ThrowException(Exception::Error(
 					String::New("Invalid number and/or types of arguments")
 				));
@@ -588,15 +598,19 @@ class ncWindow : public EventEmitter {
 			HandleScope scope;
 			
 			int ret;
-			if (args.Length() == 1 && args[0]->IsString())
-				ret = win->panel()->addstr(ToCString(String::Utf8Value(args[0]->ToString())), -1);
-			else if (args.Length() == 2 && args[0]->IsString() && args[1]->IsInt32())
-				ret = win->panel()->addstr(ToCString(String::Utf8Value(args[0]->ToString())), args[1]->Int32Value());
-			else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString())
-				ret = win->panel()->addstr(args[0]->Int32Value(), args[1]->Int32Value(), ToCString(String::Utf8Value(args[2]->ToString())), -1);
-			else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString() && args[3]->IsInt32())
-				ret = win->panel()->addstr(args[0]->Int32Value(), args[1]->Int32Value(), ToCString(String::Utf8Value(args[2]->ToString())), args[3]->Int32Value());
-			else {
+			if (args.Length() == 1 && args[0]->IsString()) {
+			  String::Utf8Value str(args[0]->ToString());
+				ret = win->panel()->addstr(ToCString(str), -1);
+			} else if (args.Length() == 2 && args[0]->IsString() && args[1]->IsInt32()) {
+			  String::Utf8Value str(args[0]->ToString());
+				ret = win->panel()->addstr(ToCString(str), args[1]->Int32Value());
+			} else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString()) {
+			  String::Utf8Value str(args[2]->ToString());
+				ret = win->panel()->addstr(args[0]->Int32Value(), args[1]->Int32Value(), ToCString(str), -1);
+			} else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString() && args[3]->IsInt32()) {
+			  String::Utf8Value str(args[2]->ToString());
+				ret = win->panel()->addstr(args[0]->Int32Value(), args[1]->Int32Value(), ToCString(str), args[3]->Int32Value());
+			} else {
 				return ThrowException(Exception::Error(
 					String::New("Invalid number and/or types of arguments")
 				));
@@ -719,15 +733,19 @@ class ncWindow : public EventEmitter {
 			HandleScope scope;
 			
 			int ret;
-			if (args.Length() == 1 && args[0]->IsString())
-				ret = win->panel()->insstr(ToCString(String::Utf8Value(args[0]->ToString())), -1);
-			else if (args.Length() == 2 && args[0]->IsString() && args[1]->IsInt32())
-				ret = win->panel()->insstr(ToCString(String::Utf8Value(args[0]->ToString())), args[1]->Int32Value());
-			else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString())
-				ret = win->panel()->insstr(args[0]->Int32Value(), args[1]->Int32Value(), ToCString(String::Utf8Value(args[2]->ToString())), -1);
-			else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString() && args[3]->IsInt32())
-				ret = win->panel()->insstr(args[0]->Int32Value(), args[1]->Int32Value(), ToCString(String::Utf8Value(args[2]->ToString())), args[3]->Int32Value());
-			else {
+			if (args.Length() == 1 && args[0]->IsString()) {
+        String::Utf8Value str(args[0]->ToString());
+				ret = win->panel()->insstr(ToCString(str), -1);
+			} else if (args.Length() == 2 && args[0]->IsString() && args[1]->IsInt32()) {
+        String::Utf8Value str(args[0]->ToString());
+				ret = win->panel()->insstr(ToCString(str), args[1]->Int32Value());
+			} else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString()) {
+			  String::Utf8Value str(args[2]->ToString());
+				ret = win->panel()->insstr(args[0]->Int32Value(), args[1]->Int32Value(), ToCString(str), -1);
+			} else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString() && args[3]->IsInt32()) {
+			  String::Utf8Value str(args[2]->ToString());
+				ret = win->panel()->insstr(args[0]->Int32Value(), args[1]->Int32Value(), ToCString(str), args[3]->Int32Value());
+			} else {
 				return ThrowException(Exception::Error(
 					String::New("Invalid number and/or types of arguments")
 				));
@@ -1118,11 +1136,13 @@ class ncWindow : public EventEmitter {
 			HandleScope scope;
 			
 			int ret;
-			if (args.Length() == 1 && args[0]->IsString())
-				ret = win->panel()->printw("%s", ToCString(String::Utf8Value(args[0]->ToString())));
-			else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString())
-				ret = win->panel()->printw(args[0]->Int32Value(), args[1]->Int32Value(), "%s", ToCString(String::Utf8Value(args[2]->ToString())));
-			else {
+			if (args.Length() == 1 && args[0]->IsString()) {
+        String::Utf8Value str(args[0]->ToString());
+				ret = win->panel()->printw("%s", ToCString(str));
+			} else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString()) { 
+        String::Utf8Value str(args[0]->ToString());
+				ret = win->panel()->printw(args[0]->Int32Value(), args[1]->Int32Value(), "%s", ToCString(str));
+			} else {
 				return ThrowException(Exception::Error(
 					String::New("Invalid number and/or types of arguments")
 				));
