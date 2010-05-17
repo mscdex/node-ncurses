@@ -27,6 +27,7 @@ static int stdin_fd = -1;
 static int stdout_fd = -1;
 
 static Persistent<String> inputChar_symbol;
+static Persistent<Array> ACS_Chars;
 
 #define ECHO_STATE_SYMBOL String::NewSymbol("echo")
 #define SHOWCURSOR_STATE_SYMBOL String::NewSymbol("showCursor")
@@ -37,6 +38,7 @@ static Persistent<String> inputChar_symbol;
 #define HASCOLORS_STATE_SYMBOL String::NewSymbol("hasColors")
 #define NUMCOLORPAIRS_STATE_SYMBOL String::NewSymbol("numColorPairs")
 #define MAXCOLORPAIRS_STATE_SYMBOL String::NewSymbol("maxColorPairs")
+#define ACS_CONSTS_SYMBOL String::NewSymbol("ACS")
 
 #define BKGD_STATE_SYMBOL String::NewSymbol("bkgd")
 #define HIDDEN_STATE_SYMBOL String::NewSymbol("hidden")
@@ -230,7 +232,7 @@ class ncWindow : public EventEmitter {
 			NODE_SET_PROTOTYPE_METHOD(t, "deleteln", Deleteln);
 			NODE_SET_PROTOTYPE_METHOD(t, "scroll", Scroll);
 			NODE_SET_PROTOTYPE_METHOD(t, "setscrreg", Setscrreg);
-			NODE_SET_PROTOTYPE_METHOD(t, "touchlines", Touchln); // multiple lines
+			NODE_SET_PROTOTYPE_METHOD(t, "touchlines", Touchln);
 			NODE_SET_PROTOTYPE_METHOD(t, "is_linetouched", Is_linetouched);
 			NODE_SET_PROTOTYPE_METHOD(t, "redrawln", Redrawln);
 			NODE_SET_PROTOTYPE_METHOD(t, "touch", Touchwin);
@@ -261,6 +263,7 @@ class ncWindow : public EventEmitter {
 			t->PrototypeTemplate()->SetAccessor(HASCOLORS_STATE_SYMBOL, HascolorsStateGetter);
 			t->PrototypeTemplate()->SetAccessor(NUMCOLORPAIRS_STATE_SYMBOL, NumcolorpairsStateGetter);
 			t->PrototypeTemplate()->SetAccessor(MAXCOLORPAIRS_STATE_SYMBOL, MaxcolorpairsStateGetter);
+			t->PrototypeTemplate()->SetAccessor(ACS_CONSTS_SYMBOL, ACSConstsGetter);
 
 			/* Window properties */
 			t->PrototypeTemplate()->SetAccessor(BKGD_STATE_SYMBOL, BkgdStateGetter, BkgdStateSetter);
@@ -274,12 +277,14 @@ class ncWindow : public EventEmitter {
 			t->PrototypeTemplate()->SetAccessor(MAXX_STATE_SYMBOL, MaxxStateGetter);
 			t->PrototypeTemplate()->SetAccessor(MAXY_STATE_SYMBOL, MaxyStateGetter);
 			t->PrototypeTemplate()->SetAccessor(WINTOUCHED_STATE_SYMBOL, WintouchedStateGetter);
-			
+
 			target->Set(String::NewSymbol("ncWindow"), t->GetFunction());
 		}
 		
 		void init(int nlines=-1, int ncols=-1, int begin_y=-1, int begin_x=-1) {
+			bool firstRun = false;
 			if (stdin_fd < 0) {
+				firstRun = true;
 				stdin_fd = STDIN_FILENO;
 				int stdin_flags = fcntl(stdin_fd, F_GETFL, 0);
 				int r = fcntl(stdin_fd, F_SETFL, stdin_flags | O_NONBLOCK);
@@ -302,6 +307,35 @@ class ncWindow : public EventEmitter {
 				panel_ = new MyPanel();
 			else
 				panel_ = new MyPanel(nlines, ncols, begin_y, begin_x);
+			if (firstRun) {
+				// Load runtime-defined ACS_* "constants"
+				ACS_Chars = Persistent<Array>::New(Array::New(25));
+				ACS_Chars->Set(String::New("ULCORNER"), Uint32::NewFromUnsigned(ACS_ULCORNER), ReadOnly);
+				ACS_Chars->Set(String::New("LLCORNER"), Uint32::NewFromUnsigned(ACS_LLCORNER), ReadOnly);
+				ACS_Chars->Set(String::New("URCORNER"), Uint32::NewFromUnsigned(ACS_URCORNER), ReadOnly);
+				ACS_Chars->Set(String::New("LRCORNER"), Uint32::NewFromUnsigned(ACS_LRCORNER), ReadOnly);
+				ACS_Chars->Set(String::New("LTEE"), Uint32::NewFromUnsigned(ACS_LTEE), ReadOnly);
+				ACS_Chars->Set(String::New("RTEE"), Uint32::NewFromUnsigned(ACS_RTEE), ReadOnly);
+				ACS_Chars->Set(String::New("BTEE"), Uint32::NewFromUnsigned(ACS_BTEE), ReadOnly);
+				ACS_Chars->Set(String::New("TTEE"), Uint32::NewFromUnsigned(ACS_TTEE), ReadOnly);
+				ACS_Chars->Set(String::New("HLINE"), Uint32::NewFromUnsigned(ACS_HLINE), ReadOnly);
+				ACS_Chars->Set(String::New("VLINE"), Uint32::NewFromUnsigned(ACS_VLINE), ReadOnly);
+				ACS_Chars->Set(String::New("PLUS"), Uint32::NewFromUnsigned(ACS_PLUS), ReadOnly);
+				ACS_Chars->Set(String::New("S1"), Uint32::NewFromUnsigned(ACS_S1), ReadOnly);
+				ACS_Chars->Set(String::New("S9"), Uint32::NewFromUnsigned(ACS_S9), ReadOnly);
+				ACS_Chars->Set(String::New("DIAMOND"), Uint32::NewFromUnsigned(ACS_DIAMOND), ReadOnly);
+				ACS_Chars->Set(String::New("CKBOARD"), Uint32::NewFromUnsigned(ACS_CKBOARD), ReadOnly);
+				ACS_Chars->Set(String::New("DEGREE"), Uint32::NewFromUnsigned(ACS_DEGREE), ReadOnly);
+				ACS_Chars->Set(String::New("PLMINUS"), Uint32::NewFromUnsigned(ACS_PLMINUS), ReadOnly);
+				ACS_Chars->Set(String::New("BULLET"), Uint32::NewFromUnsigned(ACS_BULLET), ReadOnly);
+				ACS_Chars->Set(String::New("LARROW"), Uint32::NewFromUnsigned(ACS_LARROW), ReadOnly);
+				ACS_Chars->Set(String::New("RARROW"), Uint32::NewFromUnsigned(ACS_RARROW), ReadOnly);
+				ACS_Chars->Set(String::New("DARROW"), Uint32::NewFromUnsigned(ACS_DARROW), ReadOnly);
+				ACS_Chars->Set(String::New("UARROW"), Uint32::NewFromUnsigned(ACS_UARROW), ReadOnly);
+				ACS_Chars->Set(String::New("BOARD"), Uint32::NewFromUnsigned(ACS_BOARD), ReadOnly);
+				ACS_Chars->Set(String::New("LANTERN"), Uint32::NewFromUnsigned(ACS_LANTERN), ReadOnly);
+				ACS_Chars->Set(String::New("BLOCK"), Uint32::NewFromUnsigned(ACS_BLOCK), ReadOnly);
+			}
 		}
 
 		MyPanel* panel() {
@@ -1526,6 +1560,16 @@ class ncWindow : public EventEmitter {
 			HandleScope scope;
 			
 			return scope.Close(Boolean::New(win->panel()->is_wintouched()));
+		}
+
+		static Handle<Value> ACSConstsGetter (Local<String> property, const AccessorInfo& info) {
+			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			assert(win);
+			assert(property == ACS_CONSTS_SYMBOL);
+			
+			HandleScope scope;
+			
+			return scope.Close(ACS_Chars);
 		}
 
 		ncWindow() : EventEmitter() {

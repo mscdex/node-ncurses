@@ -41,6 +41,7 @@ node-ncurses exposes only one class: **ncWindow**.
 * _Attributes_ is an unsigned integer used as a bitmask for holding window attributes (see ncconsts.js for the available values).
 
 * _ACS_Character_ is a special character used when dealing with line graphics. These are automatically determined at runtime by ncurses and thus cannot be defined as constants. Instead, they are accessible statically via the ncWindow class after at least one window has been created (so that ncurses has initialized this special character set). See the **Additional notes** at the bottom for a list of the available characters.
+    * An _ACS_Character_ can currently be retrieved by using the ACS property of an ncWindow instance (i.e. "win = new ncWindow(); win.hline(win.cols, win.ACS.DIAMOND);")
 
 
 ncWindow Events
@@ -215,29 +216,29 @@ ACS_Character descriptions
 <pre>
 Character Name   POSIX Default  Description
 --------------   -------------  -----------
-ACS_ULCORNER          +         upper left-hand corner
-ACS_LLCORNER          +         lower left-hand corner
-ACS_URCORNER          +         upper right-hand corner
-ACS_LRCORNER          +         lower right-hand corner
-ACS_RTEE              +         right tee
-ACS_LTEE              +         left tee
-ACS_BTEE              +         bottom tee
-ACS_TTEE              +         top tee
-ACS_HLINE             -         horizontal line
-ACS_VLINE             |         vertical line
-ACS_PLUS              +         plus
-ACS_S1                -         scan line 1
-ACS_S9                _         scan line 9
-ACS_DIAMOND           +         diamond
-ACS_CKBOARD           :         checker board (stipple)
-ACS_DEGREE            '         degree symbol
-ACS_PLMINUS           #         plus/minus
-ACS_BULLET            o         bullet
-ACS_LARROW            <         arrow pointing left
-ACS_RARROW            >         arrow pointing right
-ACS_DARROW            v         arrow pointing down
-ACS_UARROW            ^         arrow pointing up
-ACS_BOARD             #         board of squares
-ACS_LANTERN           #         lantern symbol
-ACS_BLOCK             #         solid square block
+ULCORNER              +         upper left-hand corner
+LLCORNER              +         lower left-hand corner
+URCORNER              +         upper right-hand corner
+LRCORNER              +         lower right-hand corner
+RTEE                  +         right tee
+LTEE                  +         left tee
+BTEE                  +         bottom tee
+TTEE                  +         top tee
+HLINE                 -         horizontal line
+VLINE                 |         vertical line
+PLUS                  +         plus
+S1                    -         scan line 1
+S9                    _         scan line 9
+DIAMOND               +         diamond
+CKBOARD               :         checker board (stipple)
+DEGREE                '         degree symbol
+PLMINUS               #         plus/minus
+BULLET                o         bullet
+LARROW                <         arrow pointing left
+RARROW                >         arrow pointing right
+DARROW                v         arrow pointing down
+UARROW                ^         arrow pointing up
+BOARD                 #         board of squares
+LANTERN               #         lantern symbol
+BLOCK                 #         solid square block
 </pre>
