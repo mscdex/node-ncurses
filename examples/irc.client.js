@@ -1,4 +1,4 @@
-var nc = require('./ncurses'), consts = require('./ncconsts'), irc = require('./irc.lib'), sys = require('sys');
+var nc = require('../ncurses'), consts = require('../ncconsts'), irc = require('./irc.lib'), sys = require('sys');
 
 function updateTopic(topic) {
 	var curx=win.curx, cury=win.cury;

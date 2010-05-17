@@ -1,4 +1,4 @@
-var nc = require('./ncurses'), consts = require('./ncconsts');
+var nc = require('../ncurses'), consts = require('../ncconsts');
 
 var win = new nc.ncWindow();
 win.print("Max color pairs support == " + win.maxColorPairs + "\n");

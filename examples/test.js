@@ -1,4 +1,4 @@
-var nc = require('./ncurses'), consts = require('./ncconsts');
+var nc = require('../ncurses'), consts = require('../ncconsts');
 
 var intScroll, inputLine = "";
 var win = new nc.ncWindow();
