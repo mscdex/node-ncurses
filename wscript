@@ -22,7 +22,7 @@ def configure(conf):
 
   # configure ncurses
   print "Configuring ncurses library ..."
-  cmd = "cd deps/ncurses && ./configure --without-debug"
+  cmd = "cd deps/ncurses && sh configure --without-debug"
   if os.system(cmd) != 0:
     conf.fatal("Configuring ncurses failed.")
   else:
