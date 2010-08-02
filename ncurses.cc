@@ -39,6 +39,7 @@ static Persistent<Array> ACS_Chars;
 #define NUMCOLORPAIRS_STATE_SYMBOL String::NewSymbol("numColorPairs")
 #define MAXCOLORPAIRS_STATE_SYMBOL String::NewSymbol("maxColorPairs")
 #define ACS_CONSTS_SYMBOL String::NewSymbol("ACS")
+#define RAW_STATE_SYMBOL String::NewSymbol("raw")
 
 #define BKGD_STATE_SYMBOL String::NewSymbol("bkgd")
 #define HIDDEN_STATE_SYMBOL String::NewSymbol("hidden")
@@ -84,6 +85,7 @@ class MyPanel : public NCursesPanel {
 		}
 		static bool echoInput_;
 		static bool showCursor_;
+		static bool isRaw_;
 	public:
 		MyPanel(int nlines, int ncols, int begin_y = 0, int begin_x = 0) : NCursesPanel(nlines,ncols,begin_y,begin_x) {
 			this->setup();
@@ -114,6 +116,16 @@ class MyPanel : public NCursesPanel {
 		}
 		static bool showCursor() {
 			return MyPanel::showCursor_;
+		}
+		static void raw(bool value) {
+			MyPanel::isRaw_ = value;
+			if (MyPanel::isRaw_)
+				::raw();
+			else
+				::noraw();
+		}
+		static bool raw() {
+			return MyPanel::isRaw_;
 		}
 		bool isStdscr() {
 			return (w == ::stdscr);
@@ -171,6 +183,7 @@ class MyPanel : public NCursesPanel {
 
 bool MyPanel::echoInput_ = false;
 bool MyPanel::showCursor_ = true;
+bool MyPanel::isRaw_ = false;
 
 class ncWindow : public EventEmitter {
 	public:
@@ -264,6 +277,7 @@ class ncWindow : public EventEmitter {
 			t->PrototypeTemplate()->SetAccessor(NUMCOLORPAIRS_STATE_SYMBOL, NumcolorpairsStateGetter);
 			t->PrototypeTemplate()->SetAccessor(MAXCOLORPAIRS_STATE_SYMBOL, MaxcolorpairsStateGetter);
 			t->PrototypeTemplate()->SetAccessor(ACS_CONSTS_SYMBOL, ACSConstsGetter);
+			t->PrototypeTemplate()->SetAccessor(RAW_STATE_SYMBOL, RawStateGetter, RawStateSetter);
 
 			/* Window properties */
 			t->PrototypeTemplate()->SetAccessor(BKGD_STATE_SYMBOL, BkgdStateGetter, BkgdStateSetter);
@@ -1590,6 +1604,30 @@ class ncWindow : public EventEmitter {
 			HandleScope scope;
 			
 			return scope.Close(ACS_Chars);
+		}
+
+		static Handle<Value> RawStateGetter (Local<String> property, const AccessorInfo& info) {
+			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			assert(win);
+			assert(property == RAW_STATE_SYMBOL);
+			
+			HandleScope scope;
+			
+			return scope.Close(Boolean::New(MyPanel::raw()));
+		}
+		
+		static void RawStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
+			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			assert(win);
+			assert(property == RAW_STATE_SYMBOL);
+
+			if (!value->IsBoolean()) {
+				ThrowException(Exception::TypeError(
+					String::New("raw should be of Boolean value")
+				));
+			}
+
+			MyPanel::raw(value->BooleanValue());
 		}
 
 		ncWindow() : EventEmitter() {

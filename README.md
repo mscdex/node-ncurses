@@ -175,6 +175,7 @@ ncWindow Properties
 
 * **echo** - _Boolean_ [Read/Write] - Enable/disable local echoing of keyboard input
 * **showCursor** - _Boolean_ [Read/Write] - Show/hide the cursor
+* **raw** - _Boolean_ [Read/Write] - Enable/disable terminal's raw mode
 * **lines** - _Integer_ [Read-only] - The total number of rows of the terminal
 * **cols** - _Integer_ [Read-only] - The total number of columns of the terminal
 * **tabsize** - _Integer_ [Read-only] - The terminal's tab size
