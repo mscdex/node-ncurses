@@ -10,4 +10,5 @@
     , "url" : "http://github.com/mscdex/node-ncurses/raw/master/LICENSE"
     }
   ]
+, "repository" : { "type" : "git", "url" : "http://github.com/mscdex/node-ncurses.git" }
 }
