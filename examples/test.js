@@ -28,7 +28,7 @@ intScroll = setInterval(function() {
 		win.scroll(1);
 		win.refresh();
 	} else {
+    clearInterval(intScroll);
 		win.close();
-		clearInterval(intScroll);
 	}
 }, 1000);

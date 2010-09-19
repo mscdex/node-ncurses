@@ -24,7 +24,7 @@ This error has been known to at least occur on OSX 10.6.* with the default Termi
     mkdir ~/.terminfo
     infocmp -L > foo
     tic foo
-	rm foo
+    rm foo
 
 If no errors occurred while executing those commands, then you are all set and should be able to execute node-ncurses examples now. If not, send me a message and let me know.
 
@@ -191,7 +191,7 @@ ncWindow Properties
 * **tabsize** - _Integer_ [Read-only] - The terminal's tab size
 * **hasMouse** - _Boolean_ [Read-only] - Indicates whether the terminal supports mouse (clicks) functionality
 * **hasColors** - _Boolean_ [Read-only] - Indicates whether the terminal supports colors
-* **hasColors** - _Boolean_ [Read-only] - Indicates whether the terminal supports colors
+* **numColors** - _Integer_ [Read-only] - Indicates the (maximum) number of colors the terminal supports colors
 * **maxColorPairs** - _Integer_ [Read-only] - The maximum number of foreground-background color pairs supported by the terminal
 * **ACS** - _Array_ [Read-only] - Contains a hash of all of the available ACS characters (for line graphics) described in the **Additional notes** section of this README
 

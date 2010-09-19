@@ -1,11 +1,11 @@
 var nc = require('../ncurses'), consts = require('../ncconsts');
 
 var win = new nc.ncWindow();
-win.print("Max color pairs support == " + win.maxColorPairs + "\n");
-win.print("Initialized color pairs == " + win.numColors + "\n\n");
+win.print("Max number of colors supported by this terminal == " + win.numColors + "\n");
+win.print("Max number of color pairs supported by this terminal == " + win.maxColorPairs + "\n\n");
 win.print("White on black\n");
 
-// Note 1: Color pair number 0 is the default (white on black) and cannot be changed.
+// Note 1: Color pair number 0 is the default (almost always white on black) and cannot be changed.
 // Note 2: When the first node-ncurses window is first instantiated, it will set up a palette
 //         containing the other 6 colors (excluding black) on black for convenience.
 

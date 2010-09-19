@@ -36,7 +36,7 @@ static Persistent<Array> ACS_Chars;
 #define TABSIZE_STATE_SYMBOL String::NewSymbol("tabsize")
 #define HASMOUSE_STATE_SYMBOL String::NewSymbol("hasMouse")
 #define HASCOLORS_STATE_SYMBOL String::NewSymbol("hasColors")
-#define NUMCOLORPAIRS_STATE_SYMBOL String::NewSymbol("numColorPairs")
+#define NUMCOLORS_STATE_SYMBOL String::NewSymbol("numColors")
 #define MAXCOLORPAIRS_STATE_SYMBOL String::NewSymbol("maxColorPairs")
 #define ACS_CONSTS_SYMBOL String::NewSymbol("ACS")
 #define RAW_STATE_SYMBOL String::NewSymbol("raw")
@@ -136,7 +136,7 @@ class MyPanel : public NCursesPanel {
 		static bool has_colors() {
 			return ::has_colors();
 		}
-		static int num_pairs() {
+		static int num_colors() {
 			return COLORS;
 		}
 		static int max_pairs() {
@@ -274,7 +274,7 @@ class ncWindow : public EventEmitter {
 			t->PrototypeTemplate()->SetAccessor(TABSIZE_STATE_SYMBOL, TabsizeStateGetter);
 			t->PrototypeTemplate()->SetAccessor(HASMOUSE_STATE_SYMBOL, HasmouseStateGetter);
 			t->PrototypeTemplate()->SetAccessor(HASCOLORS_STATE_SYMBOL, HascolorsStateGetter);
-			t->PrototypeTemplate()->SetAccessor(NUMCOLORPAIRS_STATE_SYMBOL, NumcolorpairsStateGetter);
+			t->PrototypeTemplate()->SetAccessor(NUMCOLORS_STATE_SYMBOL, NumcolorsStateGetter);
 			t->PrototypeTemplate()->SetAccessor(MAXCOLORPAIRS_STATE_SYMBOL, MaxcolorpairsStateGetter);
 			t->PrototypeTemplate()->SetAccessor(ACS_CONSTS_SYMBOL, ACSConstsGetter);
 			t->PrototypeTemplate()->SetAccessor(RAW_STATE_SYMBOL, RawStateGetter, RawStateSetter);
@@ -1566,14 +1566,14 @@ class ncWindow : public EventEmitter {
 			return scope.Close(Boolean::New(MyPanel::has_colors()));
 		}
 
-		static Handle<Value> NumcolorpairsStateGetter (Local<String> property, const AccessorInfo& info) {
+		static Handle<Value> NumcolorsStateGetter (Local<String> property, const AccessorInfo& info) {
 			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
 			assert(win);
-			assert(property == NUMCOLORPAIRS_STATE_SYMBOL);
+			assert(property == NUMCOLORS_STATE_SYMBOL);
 			
 			HandleScope scope;
 			
-			return scope.Close(Integer::New(MyPanel::num_pairs()));
+			return scope.Close(Integer::New(MyPanel::num_colors()));
 		}
 
 		static Handle<Value> MaxcolorpairsStateGetter (Local<String> property, const AccessorInfo& info) {
