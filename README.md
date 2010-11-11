@@ -8,25 +8,10 @@ Requirements
 ============
 
 * [node.js](http://nodejs.org/) -- v0.1.94+
-* A compatible terminal (OSX users see the note below)
 
 To build node-curses:
 
     node-waf configure build
-
-
-Special note for unknown terminals
-==================================
-
-If your terminal is not in terminfo's database, you'll get this error while attempting to execute any of the node-ncurses examples: "Error opening terminal: xxxxx."
-This error has been known to at least occur on OSX 10.6.* with the default Terminal.app. The fix for this is to add your terminal to the terminfo database like so:
-
-    mkdir ~/.terminfo
-    infocmp -L > foo
-    tic foo
-    rm foo
-
-If no errors occurred while executing those commands, then you are all set and should be able to execute node-ncurses examples now. If not, send me a message and let me know.
 
 
 Terminology
