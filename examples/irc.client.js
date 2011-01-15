@@ -1,3 +1,5 @@
+/* Press ESC to bring up a window list to switch between windows */
+
 var nc = require('../ncurses'),
     irc = require('./deps/irc'),
     widgets = require('../lib/widgets');
@@ -182,24 +184,6 @@ function setupWindow(win, conn) {
                 conn.client.send('WHOIS', args, false);
               }
             break;
-            case 'connect':
-            break;
-            case 'server':
-            break;
-            case 'whowas':
-            break;
-            case 'who':
-            break;
-            case 'info':
-            break;
-            case 'banlist':
-            break;
-            case 'notice':
-            break;
-            case 'invite':
-            break;
-            case 'ctcp':
-            break;
             case 'nick':
               if (args.length) {
                 var newnick = args.split(' ', 1).join('');
@@ -253,6 +237,24 @@ function setupWindow(win, conn) {
                 conn.wins.queries[to.toLowerCase()] = query;
               }
 	          break;
+            case 'connect':
+            break;
+            case 'server':
+            break;
+            case 'whowas':
+            break;
+            case 'who':
+            break;
+            case 'info':
+            break;
+            case 'banlist':
+            break;
+            case 'notice':
+            break;
+            case 'invite':
+            break;
+            case 'ctcp':
+            break;
 	          default:
   	          appendLine(win, 'Unknown command: ' + cmd);
 	        }
@@ -488,5 +490,4 @@ var COLOR_TOPIC = nc.colorPair(4, nc.colors.BLACK, nc.colors.WHITE);
 var COLOR_ACTION = nc.colorPair(5);
 var COLOR_QUIT = nc.colorPair(6);
 
-addConnection('10.1.1.3', 'jazzhands');
-//addConnection('irc.freenode.net', 'jazzhands');
+addConnection('irc.freenode.net', 'ncursestest' + Math.ceil(Math.random()*100));
