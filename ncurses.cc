@@ -23,11 +23,26 @@ using namespace std;
 using namespace v8;
 using namespace node;
 
+class MyPanel;
+class Window;
+
 static int stdin_fd = -1;
-static int stdout_fd = -1;
+
+typedef struct {
+  void* prev; // panel_node
+  void* next; // panel_node
+  MyPanel* panel;
+  Window* window;
+} panel_node;
+
+static panel_node* head_panel = NULL;
+static MyPanel* topmost_panel = NULL;
 
 static Persistent<String> inputChar_symbol;
-static Persistent<Array> ACS_Chars;
+static Persistent<Object> ACS_Chars;
+static Persistent<Object> Keys;
+static Persistent<Object> Attrs;
+static Persistent<Object> Colors;
 
 #define ECHO_STATE_SYMBOL String::NewSymbol("echo")
 #define SHOWCURSOR_STATE_SYMBOL String::NewSymbol("showCursor")
@@ -38,7 +53,6 @@ static Persistent<Array> ACS_Chars;
 #define HASCOLORS_STATE_SYMBOL String::NewSymbol("hasColors")
 #define NUMCOLORS_STATE_SYMBOL String::NewSymbol("numColors")
 #define MAXCOLORPAIRS_STATE_SYMBOL String::NewSymbol("maxColorPairs")
-#define ACS_CONSTS_SYMBOL String::NewSymbol("ACS")
 #define RAW_STATE_SYMBOL String::NewSymbol("raw")
 
 #define BKGD_STATE_SYMBOL String::NewSymbol("bkgd")
@@ -58,44 +72,131 @@ const char* ToCString(const v8::String::Utf8Value& value) {
 	return *value ? *value : "<string conversion failed>";
 }
 
+void appendLog(const char* str) {
+  FILE* fp = fopen("debug.log", "a");
+  if (fp) {
+    fputs(str, fp);
+    fclose(fp);
+  }
+}
+static int wincounter = 0;
 class MyPanel : public NCursesPanel {
 	private:
 		void setup() {
+		  if (head_panel) {
+		    panel_node* cur = head_panel;
+        while (cur) {
+          if (cur->next)
+            cur = (panel_node*)(cur->next);
+          else {
+            cur->next = new panel_node;
+            ((panel_node*)(cur->next))->next = NULL;
+            ((panel_node*)(cur->next))->prev = cur;
+            ((panel_node*)(cur->next))->panel = this;
+            ((panel_node*)(cur->next))->window = this->assocwin;
+            break;
+          }
+        }Keys->Set(String::New("UP"), Uint32::NewFromUnsigned(KEY_UP));
+      } else {
+        head_panel = new panel_node;
+        head_panel->prev = NULL;
+        head_panel->next = NULL;
+        head_panel->panel = this;
+        head_panel->window = this->assocwin;
+      }
 			// Initialize color support if it's available
 			if (::has_colors())
 				::start_color();
 				
-			// Set non-blocking mode and tell ncurses we want to receive one character at a time instead of one line at a time
+			// Set non-blocking mode and tell ncurses we want to receive one character
+			// at a time instead of one line at a time
 			::nodelay(w, true);
-			::nocbreak();
-			::halfdelay(1);
+			::cbreak();
+			//::halfdelay(1);
+			::keypad(w, true);
 
-			// Only setup the default palette once, as to not override any possible palette changes made by the user later on
-			if (w == ::stdscr) {
-				::init_pair(1, COLOR_RED, COLOR_BLACK);
-				::init_pair(2, COLOR_GREEN, COLOR_BLACK);
-				::init_pair(3, COLOR_YELLOW, COLOR_BLACK);
-				::init_pair(4, COLOR_BLUE, COLOR_BLACK);
-				::init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
-				::init_pair(6, COLOR_CYAN, COLOR_BLACK);
+			// Setup a default palette
+			if (w == ::stdscr && ::has_colors() && COLORS > 1) {
+			  short fore, back;
+		    ::pair_content(0, &fore, &back);
+        for (int color=0,i=1; i<COLOR_PAIRS; i++) {
+          ::init_pair(i, color++, back);
+          if (color == COLORS)
+            color = 0;
+        }
 			}
 			
-			// Set the window's default color pair (white on black)
+			// Set the window's default color pair
 			::wcolor_set(w, 0, NULL);
+
+			topmost_panel = this;
+      ++wincounter;
 		}
 		static bool echoInput_;
 		static bool showCursor_;
 		static bool isRaw_;
+		Window* assocwin;
 	public:
-		MyPanel(int nlines, int ncols, int begin_y = 0, int begin_x = 0) : NCursesPanel(nlines,ncols,begin_y,begin_x) {
+		MyPanel(Window* win, int nlines, int ncols, int begin_y = 0, int begin_x = 0)
+	    : NCursesPanel(nlines,ncols,begin_y,begin_x), assocwin(win) {
 			this->setup();
+      /*char str[1024];
+      sprintf(str, "%s%s%s%d\n", "MyPanel(int,int,int,int) -- topmost_panel ", (topmost_panel ? "!" : "="), "= NULL -- c == ", c);
+      appendLog(str);*/
 		}
-		MyPanel() : NCursesPanel() {
+		MyPanel(Window* win) : NCursesPanel(), assocwin(win) {
 			this->setup();
+      /*char str[1024];
+      sprintf(str, "%s%s%s%d\n", "MyPanel() -- topmost_panel ", (topmost_panel ? "!" : "="), "= NULL -- c == ", c);
+      appendLog(str);*/
 		}
 		~MyPanel() {
-			if (w == ::stdscr)
-				endwin();
+		  panel_node* cur = head_panel;
+      while (cur) {
+        if (cur->panel == this) {
+          if (cur->next)
+            ((panel_node*)(cur->next))->prev = cur->prev;
+          if (cur->prev)
+            ((panel_node*)(cur->prev))->next = cur->next;
+          if (cur == head_panel)
+            head_panel = NULL;
+          delete cur;
+          --wincounter;
+          break;
+        } else
+          cur = (panel_node*)(cur->next);
+      }
+		}
+		PANEL* getPanel() {
+		  return p;
+		}
+		Window* getWindow() {
+		  return assocwin;
+		}
+		static void updateTopmost() {
+      PANEL *pan, *panLastVis;
+      panel_node *cur = head_panel;
+
+      pan = ::panel_above(NULL);
+      while (pan) {
+        if (!(::panel_hidden(pan)))
+          panLastVis = pan;
+        if (::panel_above(pan))
+          pan = ::panel_above(pan);
+        else
+          break;
+      }
+      if (!panLastVis)
+        topmost_panel = NULL;
+      else {
+        while (cur) {
+          if (cur->panel->getPanel() == panLastVis) {
+            topmost_panel = cur->panel;
+            break;
+          } else
+            cur = (panel_node*)(cur->next);
+        }
+      }
 		}
 		static void echo(bool value) {
 			MyPanel::echoInput_ = value;
@@ -130,9 +231,6 @@ class MyPanel : public NCursesPanel {
 		bool isStdscr() {
 			return (w == ::stdscr);
 		}
-		char getch() {
-			return ::wgetch(w);
-		}
 		static bool has_colors() {
 			return ::has_colors();
 		}
@@ -140,9 +238,14 @@ class MyPanel : public NCursesPanel {
 			return COLORS;
 		}
 		static int max_pairs() {
-			return COLOR_PAIRS;
+      // at least with xterm-256color, ncurses exhibits unexpected video behavior
+      // with color pair numbers greater than 255 :-(
+      if (COLOR_PAIRS > 256)
+        return 256;
+      else
+        return COLOR_PAIRS;
 		}
-		unsigned int pair(int pair, short fore=-1, short back=-1) {
+		static unsigned int pair(int pair, short fore=-1, short back=-1) {
 			if (::has_colors()) {
 				if (fore == -1 && back == -1)
 					return COLOR_PAIR(pair);
@@ -152,32 +255,48 @@ class MyPanel : public NCursesPanel {
 				}
 			}
 		}
-		void setFgcolor(int pair, short color) {
+		static void setFgcolor(int pair, short color) {
 			short fore, back;
 			if (::pair_content(pair, &fore, &back) != ERR)
 				::init_pair(pair, color, back);
 		}
-		void setBgcolor(int pair, short color) {
+		static void setBgcolor(int pair, short color) {
 			short fore, back;
 			if (::pair_content(pair, &fore, &back) != ERR)
 				::init_pair(pair, fore, color);
 		}
-		short getFgcolor(int pair) {
+		static short getFgcolor(int pair) {
 			short fore, back;
 			if (::pair_content(pair, &fore, &back) != ERR)
 				return fore;
 			else
 				return -1;
 		}
-		short getBgcolor(int pair) {
+		static short getBgcolor(int pair) {
 			short fore, back;
 			if (::pair_content(pair, &fore, &back) != ERR)
 				return back;
 			else
 				return -1;
 		}
-		void resetScreen() {
-			endwin();
+		void hide() {
+		  NCursesPanel::hide();
+		  MyPanel::updateTopmost();
+		}
+		void show() {
+		  NCursesPanel::show();
+		  MyPanel::updateTopmost();
+		}
+		void top() {
+		  NCursesPanel::top();
+		  MyPanel::updateTopmost();
+		}
+		void bottom() {
+		  NCursesPanel::bottom();
+		  MyPanel::updateTopmost();
+		}
+		static void doUpdate() {
+		  ::doupdate();
 		}
 };
 
@@ -185,7 +304,7 @@ bool MyPanel::echoInput_ = false;
 bool MyPanel::showCursor_ = true;
 bool MyPanel::isRaw_ = false;
 
-class ncWindow : public EventEmitter {
+class Window : public EventEmitter {
 	public:
 		static void	Initialize (Handle<Object> target) {
 			HandleScope scope;
@@ -194,15 +313,12 @@ class ncWindow : public EventEmitter {
 			
 			t->Inherit(EventEmitter::constructor_template);
 			t->InstanceTemplate()->SetInternalFieldCount(1);
-			
-			inputChar_symbol = NODE_PSYMBOL("inputChar");
+			t->SetClassName(String::NewSymbol("Window"));
 
-			/* Global/Terminal functions */
-			NODE_SET_PROTOTYPE_METHOD(t, "colorPair", Colorpair);
-			NODE_SET_PROTOTYPE_METHOD(t, "resetScreen", Resetscreen);
+      inputChar_symbol = NODE_PSYMBOL("inputChar");
 
 			/* Panel-specific methods */
-			// TODO: color_set?, chgat, overlay, overwrite, copywin
+			// TODO: color_set?, overlay, overwrite
 			NODE_SET_PROTOTYPE_METHOD(t, "clearok", Clearok);
 			NODE_SET_PROTOTYPE_METHOD(t, "scrollok", Scrollok);
 			NODE_SET_PROTOTYPE_METHOD(t, "idlok", Idlok);
@@ -220,7 +336,6 @@ class ncWindow : public EventEmitter {
 			NODE_SET_PROTOTYPE_METHOD(t, "move", Mvwin);
 			NODE_SET_PROTOTYPE_METHOD(t, "refresh", Refresh);
 			NODE_SET_PROTOTYPE_METHOD(t, "noutrefresh", Noutrefresh);
-			NODE_SET_PROTOTYPE_METHOD(t, "redraw", Redraw);
 			NODE_SET_PROTOTYPE_METHOD(t, "frame", Frame);
 			NODE_SET_PROTOTYPE_METHOD(t, "boldframe", Boldframe);
 			NODE_SET_PROTOTYPE_METHOD(t, "label", Label);
@@ -257,27 +372,16 @@ class ncWindow : public EventEmitter {
 			NODE_SET_PROTOTYPE_METHOD(t, "syncdown", Syncdown);
 			NODE_SET_PROTOTYPE_METHOD(t, "syncup", Syncup);
 			NODE_SET_PROTOTYPE_METHOD(t, "cursyncup", Cursyncup);
+			NODE_SET_PROTOTYPE_METHOD(t, "copywin", Copywin);
 
 			/* Attribute-related window functions */
 			NODE_SET_PROTOTYPE_METHOD(t, "addch", Addch);
 			NODE_SET_PROTOTYPE_METHOD(t, "echochar", Echochar);
 			NODE_SET_PROTOTYPE_METHOD(t, "inch", Inch);
 			NODE_SET_PROTOTYPE_METHOD(t, "insch", Insch);
+			NODE_SET_PROTOTYPE_METHOD(t, "chgat", Chgat);
 			//NODE_SET_PROTOTYPE_METHOD(t, "addchstr", Addchstr);
 			//NODE_SET_PROTOTYPE_METHOD(t, "inchstr", Inchstr);
-			
-			/* Global/Terminal properties */
-			t->PrototypeTemplate()->SetAccessor(ECHO_STATE_SYMBOL, EchoStateGetter, EchoStateSetter);
-			t->PrototypeTemplate()->SetAccessor(SHOWCURSOR_STATE_SYMBOL, ShowcursorStateGetter, ShowcursorStateSetter);
-			t->PrototypeTemplate()->SetAccessor(LINES_STATE_SYMBOL, LinesStateGetter);
-			t->PrototypeTemplate()->SetAccessor(COLS_STATE_SYMBOL, ColsStateGetter);
-			t->PrototypeTemplate()->SetAccessor(TABSIZE_STATE_SYMBOL, TabsizeStateGetter);
-			t->PrototypeTemplate()->SetAccessor(HASMOUSE_STATE_SYMBOL, HasmouseStateGetter);
-			t->PrototypeTemplate()->SetAccessor(HASCOLORS_STATE_SYMBOL, HascolorsStateGetter);
-			t->PrototypeTemplate()->SetAccessor(NUMCOLORS_STATE_SYMBOL, NumcolorsStateGetter);
-			t->PrototypeTemplate()->SetAccessor(MAXCOLORPAIRS_STATE_SYMBOL, MaxcolorpairsStateGetter);
-			t->PrototypeTemplate()->SetAccessor(ACS_CONSTS_SYMBOL, ACSConstsGetter);
-			t->PrototypeTemplate()->SetAccessor(RAW_STATE_SYMBOL, RawStateGetter, RawStateSetter);
 
 			/* Window properties */
 			t->PrototypeTemplate()->SetAccessor(BKGD_STATE_SYMBOL, BkgdStateGetter, BkgdStateSetter);
@@ -292,63 +396,217 @@ class ncWindow : public EventEmitter {
 			t->PrototypeTemplate()->SetAccessor(MAXY_STATE_SYMBOL, MaxyStateGetter);
 			t->PrototypeTemplate()->SetAccessor(WINTOUCHED_STATE_SYMBOL, WintouchedStateGetter);
 
-			target->Set(String::NewSymbol("ncWindow"), t->GetFunction());
+			/* Global/Terminal properties and functions */
+			target->SetAccessor(ECHO_STATE_SYMBOL, EchoStateGetter, EchoStateSetter);
+			target->SetAccessor(SHOWCURSOR_STATE_SYMBOL, ShowcursorStateGetter, ShowcursorStateSetter);
+			target->SetAccessor(LINES_STATE_SYMBOL, LinesStateGetter);
+			target->SetAccessor(COLS_STATE_SYMBOL, ColsStateGetter);
+			target->SetAccessor(TABSIZE_STATE_SYMBOL, TabsizeStateGetter);
+			target->SetAccessor(HASMOUSE_STATE_SYMBOL, HasmouseStateGetter);
+			target->SetAccessor(HASCOLORS_STATE_SYMBOL, HascolorsStateGetter);
+			target->SetAccessor(NUMCOLORS_STATE_SYMBOL, NumcolorsStateGetter);
+			target->SetAccessor(MAXCOLORPAIRS_STATE_SYMBOL, MaxcolorpairsStateGetter);
+			target->SetAccessor(RAW_STATE_SYMBOL, RawStateGetter, RawStateSetter);
+      target->SetAccessor(String::NewSymbol("numwins"), NumwinsGetter);
+			target->SetAccessor(String::NewSymbol("ACS"), ACSConstsGetter);
+			target->SetAccessor(String::NewSymbol("keys"), KeyConstsGetter);
+			target->SetAccessor(String::NewSymbol("colors"), ColorConstsGetter);
+			target->SetAccessor(String::NewSymbol("attrs"), AttrConstsGetter);
+			NODE_SET_METHOD(target, "cleanup", Resetscreen);
+			NODE_SET_METHOD(target, "redraw", Redraw);
+			NODE_SET_METHOD(target, "leave", LeaveNcurses);
+			NODE_SET_METHOD(target, "restore", RestoreNcurses);
+			NODE_SET_METHOD(target, "beep", Beep);
+			NODE_SET_METHOD(target, "flash", Flash);
+			NODE_SET_METHOD(target, "doupdate", DoUpdate);
+			NODE_SET_METHOD(target, "colorPair", Colorpair);
+			NODE_SET_METHOD(target, "colorFg", Colorfg);
+			NODE_SET_METHOD(target, "colorBg", Colorbg);
+
+      target->Set(String::NewSymbol("Window"), t->GetFunction());			
 		}
 		
 		void init(int nlines=-1, int ncols=-1, int begin_y=-1, int begin_x=-1) {
-			bool firstRun = false;
+			static bool firstRun = true;
 			if (stdin_fd < 0) {
-				firstRun = true;
 				stdin_fd = STDIN_FILENO;
 				int stdin_flags = fcntl(stdin_fd, F_GETFL, 0);
 				int r = fcntl(stdin_fd, F_SETFL, stdin_flags | O_NONBLOCK);
 				if (r < 0)
 					throw "Unable to set stdin to non-block";
-
-				stdout_fd = STDOUT_FILENO;
-				int stdout_flags = fcntl(stdout_fd, F_GETFL, 0);
-				r = fcntl(stdout_fd, F_SETFL, stdout_flags | O_NONBLOCK);
-				if (r < 0)
-					throw "Unable to set stdin to non-block";
 			}
 
-			// Setup input listener
-			ev_init(&read_watcher_, io_event);
-			read_watcher_.data = this;
-			ev_io_set(&read_watcher_, stdin_fd, EV_READ);
-			ev_io_start(EV_DEFAULT_ &read_watcher_);
+      if (firstRun) {
+			  // Setup input listener
+			  ev_init(&read_watcher_, io_event);
+			  read_watcher_.data = this;
+			  ev_io_set(&read_watcher_, stdin_fd, EV_READ);
+			  ev_io_start(EV_DEFAULT_ &read_watcher_);
+			}
+
 			if (nlines < 0 || ncols < 0 || begin_y < 0 || begin_x < 0)
-				panel_ = new MyPanel();
+				panel_ = new MyPanel(this);
 			else
-				panel_ = new MyPanel(nlines, ncols, begin_y, begin_x);
+				panel_ = new MyPanel(this, nlines, ncols, begin_y, begin_x);
+
 			if (firstRun) {
-				// Load runtime-defined ACS_* "constants"
-				ACS_Chars = Persistent<Array>::New(Array::New(25));
-				ACS_Chars->Set(String::New("ULCORNER"), Uint32::NewFromUnsigned(ACS_ULCORNER), ReadOnly);
-				ACS_Chars->Set(String::New("LLCORNER"), Uint32::NewFromUnsigned(ACS_LLCORNER), ReadOnly);
-				ACS_Chars->Set(String::New("URCORNER"), Uint32::NewFromUnsigned(ACS_URCORNER), ReadOnly);
-				ACS_Chars->Set(String::New("LRCORNER"), Uint32::NewFromUnsigned(ACS_LRCORNER), ReadOnly);
-				ACS_Chars->Set(String::New("LTEE"), Uint32::NewFromUnsigned(ACS_LTEE), ReadOnly);
-				ACS_Chars->Set(String::New("RTEE"), Uint32::NewFromUnsigned(ACS_RTEE), ReadOnly);
-				ACS_Chars->Set(String::New("BTEE"), Uint32::NewFromUnsigned(ACS_BTEE), ReadOnly);
-				ACS_Chars->Set(String::New("TTEE"), Uint32::NewFromUnsigned(ACS_TTEE), ReadOnly);
-				ACS_Chars->Set(String::New("HLINE"), Uint32::NewFromUnsigned(ACS_HLINE), ReadOnly);
-				ACS_Chars->Set(String::New("VLINE"), Uint32::NewFromUnsigned(ACS_VLINE), ReadOnly);
-				ACS_Chars->Set(String::New("PLUS"), Uint32::NewFromUnsigned(ACS_PLUS), ReadOnly);
-				ACS_Chars->Set(String::New("S1"), Uint32::NewFromUnsigned(ACS_S1), ReadOnly);
-				ACS_Chars->Set(String::New("S9"), Uint32::NewFromUnsigned(ACS_S9), ReadOnly);
-				ACS_Chars->Set(String::New("DIAMOND"), Uint32::NewFromUnsigned(ACS_DIAMOND), ReadOnly);
-				ACS_Chars->Set(String::New("CKBOARD"), Uint32::NewFromUnsigned(ACS_CKBOARD), ReadOnly);
-				ACS_Chars->Set(String::New("DEGREE"), Uint32::NewFromUnsigned(ACS_DEGREE), ReadOnly);
-				ACS_Chars->Set(String::New("PLMINUS"), Uint32::NewFromUnsigned(ACS_PLMINUS), ReadOnly);
-				ACS_Chars->Set(String::New("BULLET"), Uint32::NewFromUnsigned(ACS_BULLET), ReadOnly);
-				ACS_Chars->Set(String::New("LARROW"), Uint32::NewFromUnsigned(ACS_LARROW), ReadOnly);
-				ACS_Chars->Set(String::New("RARROW"), Uint32::NewFromUnsigned(ACS_RARROW), ReadOnly);
-				ACS_Chars->Set(String::New("DARROW"), Uint32::NewFromUnsigned(ACS_DARROW), ReadOnly);
-				ACS_Chars->Set(String::New("UARROW"), Uint32::NewFromUnsigned(ACS_UARROW), ReadOnly);
-				ACS_Chars->Set(String::New("BOARD"), Uint32::NewFromUnsigned(ACS_BOARD), ReadOnly);
-				ACS_Chars->Set(String::New("LANTERN"), Uint32::NewFromUnsigned(ACS_LANTERN), ReadOnly);
-				ACS_Chars->Set(String::New("BLOCK"), Uint32::NewFromUnsigned(ACS_BLOCK), ReadOnly);
+			  firstRun = false;
+
+				ACS_Chars = Persistent<Object>::New(Object::New());
+				ACS_Chars->Set(String::New("ULCORNER"), Uint32::NewFromUnsigned(ACS_ULCORNER));
+				ACS_Chars->Set(String::New("LLCORNER"), Uint32::NewFromUnsigned(ACS_LLCORNER));
+				ACS_Chars->Set(String::New("URCORNER"), Uint32::NewFromUnsigned(ACS_URCORNER));
+				ACS_Chars->Set(String::New("LRCORNER"), Uint32::NewFromUnsigned(ACS_LRCORNER));
+				ACS_Chars->Set(String::New("LTEE"), Uint32::NewFromUnsigned(ACS_LTEE));
+				ACS_Chars->Set(String::New("RTEE"), Uint32::NewFromUnsigned(ACS_RTEE));
+				ACS_Chars->Set(String::New("BTEE"), Uint32::NewFromUnsigned(ACS_BTEE));
+				ACS_Chars->Set(String::New("TTEE"), Uint32::NewFromUnsigned(ACS_TTEE));
+				ACS_Chars->Set(String::New("HLINE"), Uint32::NewFromUnsigned(ACS_HLINE));
+				ACS_Chars->Set(String::New("VLINE"), Uint32::NewFromUnsigned(ACS_VLINE));
+				ACS_Chars->Set(String::New("PLUS"), Uint32::NewFromUnsigned(ACS_PLUS));
+				ACS_Chars->Set(String::New("S1"), Uint32::NewFromUnsigned(ACS_S1));
+				ACS_Chars->Set(String::New("S9"), Uint32::NewFromUnsigned(ACS_S9));
+				ACS_Chars->Set(String::New("DIAMOND"), Uint32::NewFromUnsigned(ACS_DIAMOND));
+				ACS_Chars->Set(String::New("CKBOARD"), Uint32::NewFromUnsigned(ACS_CKBOARD));
+				ACS_Chars->Set(String::New("DEGREE"), Uint32::NewFromUnsigned(ACS_DEGREE));
+				ACS_Chars->Set(String::New("PLMINUS"), Uint32::NewFromUnsigned(ACS_PLMINUS));
+				ACS_Chars->Set(String::New("BULLET"), Uint32::NewFromUnsigned(ACS_BULLET));
+				ACS_Chars->Set(String::New("LARROW"), Uint32::NewFromUnsigned(ACS_LARROW));
+				ACS_Chars->Set(String::New("RARROW"), Uint32::NewFromUnsigned(ACS_RARROW));
+				ACS_Chars->Set(String::New("DARROW"), Uint32::NewFromUnsigned(ACS_DARROW));
+				ACS_Chars->Set(String::New("UARROW"), Uint32::NewFromUnsigned(ACS_UARROW));
+				ACS_Chars->Set(String::New("BOARD"), Uint32::NewFromUnsigned(ACS_BOARD));
+				ACS_Chars->Set(String::New("LANTERN"), Uint32::NewFromUnsigned(ACS_LANTERN));
+				ACS_Chars->Set(String::New("BLOCK"), Uint32::NewFromUnsigned(ACS_BLOCK));
+
+        Keys = Persistent<Object>::New(Object::New());
+        Keys->Set(String::New("SPACE"), Uint32::NewFromUnsigned(32));
+        Keys->Set(String::New("NEWLINE"), Uint32::NewFromUnsigned(10));
+        Keys->Set(String::New("ESC"), Uint32::NewFromUnsigned(27));
+				Keys->Set(String::New("UP"), Uint32::NewFromUnsigned(KEY_UP));
+				Keys->Set(String::New("DOWN"), Uint32::NewFromUnsigned(KEY_DOWN));
+				Keys->Set(String::New("LEFT"), Uint32::NewFromUnsigned(KEY_LEFT));
+				Keys->Set(String::New("RIGHT"), Uint32::NewFromUnsigned(KEY_RIGHT));
+				Keys->Set(String::New("HOME"), Uint32::NewFromUnsigned(KEY_HOME));
+				Keys->Set(String::New("BACKSPACE"), Uint32::NewFromUnsigned(KEY_BACKSPACE));
+				Keys->Set(String::New("BREAK"), Uint32::NewFromUnsigned(KEY_BREAK));
+				Keys->Set(String::New("F0"), Uint32::NewFromUnsigned(KEY_F(0)));
+				Keys->Set(String::New("F1"), Uint32::NewFromUnsigned(KEY_F(1)));
+				Keys->Set(String::New("F2"), Uint32::NewFromUnsigned(KEY_F(2)));
+				Keys->Set(String::New("F3"), Uint32::NewFromUnsigned(KEY_F(3)));
+				Keys->Set(String::New("F4"), Uint32::NewFromUnsigned(KEY_F(4)));
+				Keys->Set(String::New("F5"), Uint32::NewFromUnsigned(KEY_F(5)));
+				Keys->Set(String::New("F6"), Uint32::NewFromUnsigned(KEY_F(6)));
+				Keys->Set(String::New("F7"), Uint32::NewFromUnsigned(KEY_F(7)));
+				Keys->Set(String::New("F8"), Uint32::NewFromUnsigned(KEY_F(8)));
+				Keys->Set(String::New("F9"), Uint32::NewFromUnsigned(KEY_F(9)));
+				Keys->Set(String::New("F10"), Uint32::NewFromUnsigned(KEY_F(10)));
+				Keys->Set(String::New("F11"), Uint32::NewFromUnsigned(KEY_F(11)));
+				Keys->Set(String::New("F12"), Uint32::NewFromUnsigned(KEY_F(12)));
+				Keys->Set(String::New("DL"), Uint32::NewFromUnsigned(KEY_DL));
+				Keys->Set(String::New("IL"), Uint32::NewFromUnsigned(KEY_IL));
+				Keys->Set(String::New("DEL"), Uint32::NewFromUnsigned(KEY_DC));
+				Keys->Set(String::New("INS"), Uint32::NewFromUnsigned(KEY_IC));
+				Keys->Set(String::New("EIC"), Uint32::NewFromUnsigned(KEY_EIC));
+				Keys->Set(String::New("CLEAR"), Uint32::NewFromUnsigned(KEY_CLEAR));
+				Keys->Set(String::New("EOS"), Uint32::NewFromUnsigned(KEY_EOS));
+				Keys->Set(String::New("EOL"), Uint32::NewFromUnsigned(KEY_EOL));
+				Keys->Set(String::New("SF"), Uint32::NewFromUnsigned(KEY_SF));
+				Keys->Set(String::New("SR"), Uint32::NewFromUnsigned(KEY_SR));
+				Keys->Set(String::New("NPAGE"), Uint32::NewFromUnsigned(KEY_NPAGE));
+				Keys->Set(String::New("PPAGE"), Uint32::NewFromUnsigned(KEY_PPAGE));
+				Keys->Set(String::New("STAB"), Uint32::NewFromUnsigned(KEY_STAB));
+				Keys->Set(String::New("CTAB"), Uint32::NewFromUnsigned(KEY_CTAB));
+				Keys->Set(String::New("CATAB"), Uint32::NewFromUnsigned(KEY_CATAB));
+				Keys->Set(String::New("ENTER"), Uint32::NewFromUnsigned(KEY_ENTER));
+				Keys->Set(String::New("SRESET"), Uint32::NewFromUnsigned(KEY_SRESET));
+				Keys->Set(String::New("RESET"), Uint32::NewFromUnsigned(KEY_RESET));
+				Keys->Set(String::New("PRINT"), Uint32::NewFromUnsigned(KEY_PRINT));
+				Keys->Set(String::New("LL"), Uint32::NewFromUnsigned(KEY_LL));
+				Keys->Set(String::New("UPLEFT"), Uint32::NewFromUnsigned(KEY_A1));
+				Keys->Set(String::New("UPRIGHT"), Uint32::NewFromUnsigned(KEY_A3));
+				Keys->Set(String::New("CENTER"), Uint32::NewFromUnsigned(KEY_B2));
+				Keys->Set(String::New("DOWNLEFT"), Uint32::NewFromUnsigned(KEY_C1));
+				Keys->Set(String::New("DOWNRIGHT"), Uint32::NewFromUnsigned(KEY_C3));
+				Keys->Set(String::New("BTAB"), Uint32::NewFromUnsigned(KEY_BTAB));
+				Keys->Set(String::New("BEG"), Uint32::NewFromUnsigned(KEY_BEG));
+				Keys->Set(String::New("CANCEL"), Uint32::NewFromUnsigned(KEY_CANCEL));
+				Keys->Set(String::New("CLOSE"), Uint32::NewFromUnsigned(KEY_CLOSE));
+				Keys->Set(String::New("COMMAND"), Uint32::NewFromUnsigned(KEY_COMMAND));
+				Keys->Set(String::New("COPY"), Uint32::NewFromUnsigned(KEY_COPY));
+				Keys->Set(String::New("CREATE"), Uint32::NewFromUnsigned(KEY_CREATE));
+				Keys->Set(String::New("END"), Uint32::NewFromUnsigned(KEY_END));
+				Keys->Set(String::New("EXIT"), Uint32::NewFromUnsigned(KEY_EXIT));
+				Keys->Set(String::New("FIND"), Uint32::NewFromUnsigned(KEY_FIND));
+				Keys->Set(String::New("FIND"), Uint32::NewFromUnsigned(KEY_HELP));
+				Keys->Set(String::New("MARK"), Uint32::NewFromUnsigned(KEY_MARK));
+				Keys->Set(String::New("MESSAGE"), Uint32::NewFromUnsigned(KEY_MESSAGE));
+				Keys->Set(String::New("MOVE"), Uint32::NewFromUnsigned(KEY_MOVE));
+				Keys->Set(String::New("NEXT"), Uint32::NewFromUnsigned(KEY_NEXT));
+				Keys->Set(String::New("OPEN"), Uint32::NewFromUnsigned(KEY_OPEN));
+				Keys->Set(String::New("OPTIONS"), Uint32::NewFromUnsigned(KEY_OPTIONS));
+				Keys->Set(String::New("PREVIOUS"), Uint32::NewFromUnsigned(KEY_PREVIOUS));
+				Keys->Set(String::New("REDO"), Uint32::NewFromUnsigned(KEY_REDO));
+				Keys->Set(String::New("REFERENCE"), Uint32::NewFromUnsigned(KEY_REFERENCE));
+				Keys->Set(String::New("REFRESH"), Uint32::NewFromUnsigned(KEY_REFRESH));
+				Keys->Set(String::New("REPLACE"), Uint32::NewFromUnsigned(KEY_REPLACE));
+				Keys->Set(String::New("RESTART"), Uint32::NewFromUnsigned(KEY_RESTART));
+				Keys->Set(String::New("RESUME"), Uint32::NewFromUnsigned(KEY_RESUME));
+				Keys->Set(String::New("SAVE"), Uint32::NewFromUnsigned(KEY_SAVE));
+				Keys->Set(String::New("S_BEG"), Uint32::NewFromUnsigned(KEY_SBEG));
+				Keys->Set(String::New("S_CANCEL"), Uint32::NewFromUnsigned(KEY_SCANCEL));
+				Keys->Set(String::New("S_COMMAND"), Uint32::NewFromUnsigned(KEY_SCOMMAND));
+				Keys->Set(String::New("S_COPY"), Uint32::NewFromUnsigned(KEY_SCOPY));
+				Keys->Set(String::New("S_CREATE"), Uint32::NewFromUnsigned(KEY_SCREATE));
+				Keys->Set(String::New("S_DC"), Uint32::NewFromUnsigned(KEY_SDC));
+				Keys->Set(String::New("S_DL"), Uint32::NewFromUnsigned(KEY_SDL));
+				Keys->Set(String::New("SELECT"), Uint32::NewFromUnsigned(KEY_SELECT));
+				Keys->Set(String::New("SEND"), Uint32::NewFromUnsigned(KEY_SEND));
+				Keys->Set(String::New("S_EOL"), Uint32::NewFromUnsigned(KEY_SEOL));
+				Keys->Set(String::New("S_EXIT"), Uint32::NewFromUnsigned(KEY_SEXIT));
+				Keys->Set(String::New("S_FIND"), Uint32::NewFromUnsigned(KEY_SFIND));
+				Keys->Set(String::New("S_HELP"), Uint32::NewFromUnsigned(KEY_SHELP));
+				Keys->Set(String::New("S_HOME"), Uint32::NewFromUnsigned(KEY_SHOME));
+				Keys->Set(String::New("S_IC"), Uint32::NewFromUnsigned(KEY_SIC));
+				Keys->Set(String::New("S_LEFT"), Uint32::NewFromUnsigned(KEY_SLEFT));
+				Keys->Set(String::New("S_MESSAGE"), Uint32::NewFromUnsigned(KEY_SMESSAGE));
+				Keys->Set(String::New("S_MOVE"), Uint32::NewFromUnsigned(KEY_SMOVE));
+				Keys->Set(String::New("S_NEXT"), Uint32::NewFromUnsigned(KEY_SNEXT));
+				Keys->Set(String::New("S_OPTIONS"), Uint32::NewFromUnsigned(KEY_SOPTIONS));
+				Keys->Set(String::New("S_PREVIOUS"), Uint32::NewFromUnsigned(KEY_SPREVIOUS));
+				Keys->Set(String::New("S_PRINT"), Uint32::NewFromUnsigned(KEY_SPRINT));
+				Keys->Set(String::New("S_REDO"), Uint32::NewFromUnsigned(KEY_SREDO));
+				Keys->Set(String::New("S_REPLACE"), Uint32::NewFromUnsigned(KEY_SREPLACE));
+				Keys->Set(String::New("S_RIGHT"), Uint32::NewFromUnsigned(KEY_SRIGHT));
+				Keys->Set(String::New("S_RESUME"), Uint32::NewFromUnsigned(KEY_SRSUME));
+				Keys->Set(String::New("S_SAVE"), Uint32::NewFromUnsigned(KEY_SSAVE));
+				Keys->Set(String::New("S_SUSPEND"), Uint32::NewFromUnsigned(KEY_SSUSPEND));
+				Keys->Set(String::New("S_UNDO"), Uint32::NewFromUnsigned(KEY_SUNDO));
+				Keys->Set(String::New("SUSPEND"), Uint32::NewFromUnsigned(KEY_SUSPEND));
+				Keys->Set(String::New("UNDO"), Uint32::NewFromUnsigned(KEY_UNDO));
+				Keys->Set(String::New("MOUSE"), Uint32::NewFromUnsigned(KEY_MOUSE));
+				Keys->Set(String::New("RESIZE"), Uint32::NewFromUnsigned(KEY_RESIZE));
+
+        Colors = Persistent<Object>::New(Object::New());
+				Colors->Set(String::New("BLACK"), Uint32::NewFromUnsigned(COLOR_BLACK));
+				Colors->Set(String::New("RED"), Uint32::NewFromUnsigned(COLOR_RED));
+				Colors->Set(String::New("GREEN"), Uint32::NewFromUnsigned(COLOR_GREEN));
+				Colors->Set(String::New("YELLOW"), Uint32::NewFromUnsigned(COLOR_YELLOW));
+				Colors->Set(String::New("BLUE"), Uint32::NewFromUnsigned(COLOR_BLUE));
+				Colors->Set(String::New("MAGENTA"), Uint32::NewFromUnsigned(COLOR_MAGENTA));
+				Colors->Set(String::New("CYAN"), Uint32::NewFromUnsigned(COLOR_CYAN));
+				Colors->Set(String::New("WHITE"), Uint32::NewFromUnsigned(COLOR_WHITE));
+
+        Attrs = Persistent<Object>::New(Object::New());
+				Attrs->Set(String::New("NORMAL"), Uint32::NewFromUnsigned(A_NORMAL));
+				Attrs->Set(String::New("STANDOUT"), Uint32::NewFromUnsigned(A_STANDOUT));
+				Attrs->Set(String::New("UNDERLINE"), Uint32::NewFromUnsigned(A_UNDERLINE));
+				Attrs->Set(String::New("REVERSE"), Uint32::NewFromUnsigned(A_REVERSE));
+				Attrs->Set(String::New("BLINK"), Uint32::NewFromUnsigned(A_BLINK));
+				Attrs->Set(String::New("DIM"), Uint32::NewFromUnsigned(A_DIM));
+				Attrs->Set(String::New("BOLD"), Uint32::NewFromUnsigned(A_BOLD));
+				Attrs->Set(String::New("INVISIBLE"), Uint32::NewFromUnsigned(A_INVIS));
+				Attrs->Set(String::New("PROTECT"), Uint32::NewFromUnsigned(A_PROTECT));
 			}
 		}
 
@@ -357,11 +615,26 @@ class ncWindow : public EventEmitter {
 		}
 		
 		void close() {
+      //appendLog("Internal close() called\n");
 			if (panel_) {
-				if (panel_->isStdscr())
+        bool wasStdscr = panel_->isStdscr();
+				if (wasStdscr) {
 					ev_io_stop(EV_DEFAULT_ &read_watcher_);
+			  }
+        Unref();
 				delete panel_;
 				panel_ = NULL;
+        MyPanel::updateTopmost();
+        /*char str[1024];
+        sprintf(str, "%s%s%s\n", "close() -- topmost_panel ", (topmost_panel ? "!" : "="), "= NULL");
+        appendLog(str);
+        if (topmost_panel) {
+          sprintf(str, "%s%p\n", "close() -- topmost_panel == ", topmost_panel);
+          appendLog(str);
+          //topmost_panel->top();
+        }*/
+        if (wasStdscr)
+          ::endwin();
 			}
 		}
 
@@ -369,27 +642,30 @@ class ncWindow : public EventEmitter {
 		static Handle<Value> New (const Arguments& args) {
 			HandleScope scope;
 
-			ncWindow *win;
-			if (stdin_fd < 0)
-				win = new ncWindow();
-			else if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
-				win = new ncWindow(args[0]->Int32Value(), args[1]->Int32Value(), 0, 0);
+			Window *win;
+      bool doRef = false;
+			if (stdin_fd < 0) {
+				win = new Window();
+        doRef = true;
+			} else if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
+				win = new Window(args[0]->Int32Value(), args[1]->Int32Value(), 0, 0);
 			else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsInt32())
-				win = new ncWindow(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Int32Value(), 0);
+				win = new Window(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Int32Value(), 0);
 			else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsInt32() && args[3]->IsInt32())
-				win = new ncWindow(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Int32Value(), args[3]->Int32Value());
+				win = new Window(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Int32Value(), args[3]->Int32Value());
 			else {
 				return ThrowException(Exception::Error(
 					String::New("Invalid number and/or types of arguments")
 				));
 			}
-
 			win->Wrap(args.This());
+      //if (doRef)
+        win->Ref();
 			return args.This();
 		}
 
 		static Handle<Value> Close (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
 
 			if (win->panel() != NULL) {
@@ -399,7 +675,7 @@ class ncWindow : public EventEmitter {
 		}
 		
 		static Handle<Value> Hide (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
 
 			win->panel()->hide();
@@ -408,7 +684,7 @@ class ncWindow : public EventEmitter {
 		}
 		
 		static Handle<Value> Show (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
 
 			win->panel()->show();
@@ -417,7 +693,7 @@ class ncWindow : public EventEmitter {
 		}
 		
 		static Handle<Value> Top (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
 
 			win->panel()->top();
@@ -426,7 +702,7 @@ class ncWindow : public EventEmitter {
 		}
 		
 		static Handle<Value> Bottom (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
 
 			win->panel()->bottom();
@@ -435,7 +711,7 @@ class ncWindow : public EventEmitter {
 		}
 		
 		static Handle<Value> Mvwin (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
 
 			int ret;
@@ -451,7 +727,7 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Refresh (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
 
 			int ret = win->panel()->refresh();
@@ -460,7 +736,7 @@ class ncWindow : public EventEmitter {
 		}
 		
 		static Handle<Value> Noutrefresh (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
 
 			int ret = win->panel()->noutrefresh();
@@ -469,18 +745,17 @@ class ncWindow : public EventEmitter {
 		}
 		
 		static Handle<Value> Redraw (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
 			HandleScope scope;
 
-			win->panel()->redraw();
+			MyPanel::redraw();
 
 			return Undefined();
 		}
 		
 		static Handle<Value> Frame (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			if (args.Length() == 0) {
 				win->panel()->frame(NULL, NULL);
 			} else if (args.Length() == 1 && args[0]->IsString()) {
@@ -488,7 +763,7 @@ class ncWindow : public EventEmitter {
 			  win->panel()->frame(ToCString(str), NULL);
 			} else if (args.Length() == 2 && args[0]->IsString() && args[1]->IsString()) {
 			  String::Utf8Value str0(args[0]->ToString());
-			  String::Utf8Value str1(args[0]->ToString());
+			  String::Utf8Value str1(args[1]->ToString());
 				win->panel()->frame(ToCString(str0), ToCString(str1));
 			} else {
 				return ThrowException(Exception::Error(
@@ -500,9 +775,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Boldframe (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			if (args.Length() == 0) {
 				win->panel()->boldframe(NULL, NULL);
 			} else if (args.Length() == 1 && args[0]->IsString()) {
@@ -510,7 +785,7 @@ class ncWindow : public EventEmitter {
 				win->panel()->boldframe(ToCString(str), NULL);
 			} else if (args.Length() == 2 && args[0]->IsString() && args[1]->IsString()) {
 			  String::Utf8Value str0(args[0]->ToString());
-			  String::Utf8Value str1(args[0]->ToString());
+			  String::Utf8Value str1(args[1]->ToString());
 				win->panel()->boldframe(ToCString(str0), ToCString(str1));
 			} else {
 				return ThrowException(Exception::Error(
@@ -522,9 +797,9 @@ class ncWindow : public EventEmitter {
 		}
 		
 		static Handle<Value> Label (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			if (args.Length() == 1 && args[0]->IsString()) {
 			  String::Utf8Value str(args[0]->ToString());
 				win->panel()->label(ToCString(str), NULL);
@@ -542,9 +817,9 @@ class ncWindow : public EventEmitter {
 		}
 		
 		static Handle<Value> Centertext (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsString()) {
 			  String::Utf8Value str(args[1]->ToString());
 				win->panel()->centertext(args[0]->Int32Value(), ToCString(str));
@@ -558,9 +833,9 @@ class ncWindow : public EventEmitter {
 		}
 		
 		static Handle<Value> Move (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
 				ret = win->panel()->move(args[0]->Int32Value(), args[1]->Int32Value());
@@ -574,9 +849,9 @@ class ncWindow : public EventEmitter {
 		}
 		
 		static Handle<Value> Addch (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsUint32())
 				ret = win->panel()->addch(args[0]->Uint32Value());
@@ -592,9 +867,9 @@ class ncWindow : public EventEmitter {
 		}
 		
 		static Handle<Value> Echochar (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsUint32())
 				ret = win->panel()->echochar(args[0]->Uint32Value());
@@ -608,9 +883,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Addstr (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsString()) {
 			  String::Utf8Value str(args[0]->ToString());
@@ -635,7 +910,7 @@ class ncWindow : public EventEmitter {
 		
 		// FIXME: addchstr requires a pointer to a chtype not an actual value, unlike the other ACS_*-using methods
 		/*static Handle<Value> Addchstr (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
 			
 			int ret;
@@ -657,9 +932,9 @@ class ncWindow : public EventEmitter {
 		}*/
 			
 		static Handle<Value> Inch (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			unsigned int ret;
 			if (args.Length() == 0)
 				ret = win->panel()->inch();
@@ -676,7 +951,7 @@ class ncWindow : public EventEmitter {
 		
 		// FIXME: Need pointer to chtype instead of actual value
 		/*static Handle<Value> Inchstr (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
 			
 			int ret;
@@ -698,9 +973,9 @@ class ncWindow : public EventEmitter {
 		}*/
 
 		static Handle<Value> Insch (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsUint32())
 				ret = win->panel()->insch(args[0]->Uint32Value());
@@ -715,19 +990,41 @@ class ncWindow : public EventEmitter {
 			return scope.Close(Integer::New(ret));
 		}
 
-		static Handle<Value> Insertln (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+		static Handle<Value> Chgat (const Arguments& args) {
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
+			int ret;
+			if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsUint32())
+				ret = win->panel()->chgat(args[0]->Int32Value(), args[1]->Uint32Value(), win->panel()->getcolor());
+			else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsUint32() && args[2]->IsUint32())
+				ret = win->panel()->chgat(args[0]->Int32Value(), (attr_t)(args[1]->Uint32Value()), args[2]->Uint32Value());
+			else if (args.Length() == 4 && args[0]->IsUint32() && args[1]->IsUint32() && args[2]->IsInt32() && args[3]->IsUint32())
+				ret = win->panel()->chgat(args[0]->Uint32Value(), args[1]->Uint32Value(), args[2]->Int32Value(), args[3]->Uint32Value(), win->panel()->getcolor());
+			else if (args.Length() == 5 && args[0]->IsUint32() && args[1]->IsUint32() && args[2]->IsInt32() && args[3]->IsUint32() && args[4]->IsUint32())
+				ret = win->panel()->chgat(args[0]->Uint32Value(), args[1]->Uint32Value(), args[2]->Int32Value(), args[3]->Uint32Value(), args[4]->Uint32Value());
+			else {
+				return ThrowException(Exception::Error(
+					String::New("Invalid number and/or types of arguments")
+				));
+			}
+
+			return scope.Close(Integer::New(ret));
+		}
+
+		static Handle<Value> Insertln (const Arguments& args) {
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
+			HandleScope scope;
+
 			int ret = win->panel()->insertln();
 
 			return scope.Close(Integer::New(ret));
 		}
 
 		static Handle<Value> Insdelln (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 0)
 				ret = win->panel()->insdelln(1);
@@ -743,9 +1040,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Insstr (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsString()) {
         String::Utf8Value str(args[0]->ToString());
@@ -769,9 +1066,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Attron (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsUint32())
 				ret = win->panel()->attron(args[0]->Uint32Value());
@@ -785,9 +1082,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Attroff (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsUint32())
 				ret = win->panel()->attroff(args[0]->Uint32Value());
@@ -801,9 +1098,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Attrset (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsUint32())
 				ret = win->panel()->attrset(args[0]->Uint32Value());
@@ -817,18 +1114,18 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Attrget (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			unsigned int ret = win->panel()->attrget();
 
 			return scope.Close(Integer::NewFromUnsigned(ret));
 		}
 
 		static Handle<Value> Box (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 0)
 				ret = win->panel()->box(0, 0);
@@ -846,9 +1143,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Border (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 0)
 				ret = win->panel()->border(0);
@@ -878,9 +1175,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Hline (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsInt32())
 				ret = win->panel()->hline(args[0]->Int32Value(), 0);
@@ -900,9 +1197,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Vline (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsInt32())
 				ret = win->panel()->vline(args[0]->Int32Value(), 0);
@@ -922,45 +1219,45 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Erase (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret = win->panel()->erase();
 
 			return scope.Close(Integer::New(ret));
 		}
 
 		static Handle<Value> Clear (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret = win->panel()->clear();
 
 			return scope.Close(Integer::New(ret));
 		}
 
 		static Handle<Value> Clrtobot (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret = win->panel()->clrtobot();
 
 			return scope.Close(Integer::New(ret));
 		}
 
 		static Handle<Value> Clrtoeol (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret = win->panel()->clrtoeol();
 
 			return scope.Close(Integer::New(ret));
 		}
 
 		static Handle<Value> Delch (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 0)
 				ret = win->panel()->delch();
@@ -976,18 +1273,18 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Deleteln (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret = win->panel()->deleteln();
 
 			return scope.Close(Integer::New(ret));
 		}
 
 		static Handle<Value> Scroll (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 0)
 				ret = win->panel()->scroll(1);
@@ -1003,9 +1300,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Setscrreg (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
 				ret = win->panel()->setscrreg(args[0]->Int32Value(), args[1]->Int32Value());
@@ -1019,7 +1316,7 @@ class ncWindow : public EventEmitter {
 		}
 
 		/*static Handle<Value> Touchline (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
 			
 			int ret;
@@ -1035,27 +1332,27 @@ class ncWindow : public EventEmitter {
 		}*/
 
 		static Handle<Value> Touchwin (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret = win->panel()->touchwin();
 
 			return scope.Close(Integer::New(ret));
 		}
 
 		static Handle<Value> Untouchwin (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret = win->panel()->untouchwin();
 
 			return scope.Close(Integer::New(ret));
 		}
 
 		static Handle<Value> Touchln (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
 				ret = win->panel()->touchln(args[0]->Int32Value(), args[1]->Int32Value(), true);
@@ -1071,9 +1368,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Is_linetouched (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			bool ret;
 			if (args.Length() == 1 && args[0]->IsInt32())
 				ret = win->panel()->is_linetouched(args[0]->Int32Value());
@@ -1087,9 +1384,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Redrawln (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
 				ret = win->panel()->redrawln(args[0]->Int32Value(), args[1]->Int32Value());
@@ -1103,36 +1400,36 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Syncdown (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			win->panel()->syncdown();
 
 			return Undefined();
 		}
 
 		static Handle<Value> Syncup (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			win->panel()->syncup();
 
 			return Undefined();
 		}
 
 		static Handle<Value> Cursyncup (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			win->panel()->cursyncup();
 
 			return Undefined();
 		}
 
 		static Handle<Value> Wresize (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
 				ret = win->panel()->wresize(args[0]->Int32Value(), args[1]->Int32Value());
@@ -1146,9 +1443,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Print (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsString()) {
         String::Utf8Value str(args[0]->ToString());
@@ -1166,9 +1463,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Clearok (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsBoolean())
 				ret = win->panel()->clearok(args[0]->BooleanValue());
@@ -1182,9 +1479,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Scrollok (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsBoolean())
 				ret = win->panel()->scrollok(args[0]->BooleanValue());
@@ -1198,9 +1495,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Idlok (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsBoolean())
 				ret = win->panel()->idlok(args[0]->BooleanValue());
@@ -1214,9 +1511,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Idcok (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			if (args.Length() == 1 && args[0]->IsBoolean())
 				win->panel()->idcok(args[0]->BooleanValue());
 			else {
@@ -1229,9 +1526,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Leaveok (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsBoolean())
 				ret = win->panel()->leaveok(args[0]->BooleanValue());
@@ -1245,9 +1542,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Syncok (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsBoolean())
 				ret = win->panel()->syncok(args[0]->BooleanValue());
@@ -1261,9 +1558,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Immedok (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			if (args.Length() == 1 && args[0]->IsBoolean())
 				win->panel()->immedok(args[0]->BooleanValue());
 			else {
@@ -1276,9 +1573,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Keypad (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsBoolean())
 				ret = win->panel()->keypad(args[0]->BooleanValue());
@@ -1292,9 +1589,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Meta (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsBoolean())
 				ret = win->panel()->meta(args[0]->BooleanValue());
@@ -1308,9 +1605,9 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> Standout (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
 			HandleScope scope;
-			
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsBoolean()) {
 				if (args[0]->BooleanValue())
@@ -1326,15 +1623,64 @@ class ncWindow : public EventEmitter {
 			return scope.Close(Integer::New(ret));
 		}
 
-		static Handle<Value> Colorpair (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+		static Handle<Value> Resetscreen (const Arguments& args) {
 			HandleScope scope;
-			
+
+			::endwin(); //MyPanel::resetScreen();
+
+			return Undefined();
+		}
+
+		static Handle<Value> LeaveNcurses (const Arguments& args) {
+			HandleScope scope;
+
+			::def_prog_mode();
+			::endwin();
+
+			return Undefined();
+		}
+
+		static Handle<Value> RestoreNcurses (const Arguments& args) {
+			HandleScope scope;
+
+			::reset_prog_mode();
+			MyPanel::redraw();
+
+			return Undefined();
+		}
+
+		static Handle<Value> Beep (const Arguments& args) {
+			HandleScope scope;
+
+			::beep();
+
+			return Undefined();
+		}
+
+		static Handle<Value> Flash (const Arguments& args) {
+			HandleScope scope;
+
+			::flash();
+
+			return Undefined();
+		}
+
+		static Handle<Value> DoUpdate (const Arguments& args) {
+			HandleScope scope;
+
+			MyPanel::doUpdate();
+
+			return Undefined();
+		}
+
+		static Handle<Value> Colorpair (const Arguments& args) {
+			HandleScope scope;
+
 			int ret;
 			if (args.Length() == 1 && args[0]->IsInt32())
-				ret = win->panel()->pair(args[0]->Int32Value());
+				ret = MyPanel::pair(args[0]->Int32Value());
 			else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsInt32())
-				ret = win->panel()->pair(args[0]->Int32Value(), (short)args[1]->Int32Value(), (short)args[2]->Int32Value());
+				ret = MyPanel::pair(args[0]->Int32Value(), (short)args[1]->Int32Value(), (short)args[2]->Int32Value());
 			else {
 				return ThrowException(Exception::Error(
 					String::New("Invalid number and/or types of arguments")
@@ -1344,29 +1690,67 @@ class ncWindow : public EventEmitter {
 			return scope.Close(Integer::New(ret));
 		}
 
-		static Handle<Value> Resetscreen (const Arguments& args) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(args.This());
+		static Handle<Value> Colorfg (const Arguments& args) {
 			HandleScope scope;
-			
-			win->panel()->resetScreen();
 
-			return Undefined();
+			int ret;
+			if (args.Length() == 1 && args[0]->IsUint32())
+				ret = MyPanel::getFgcolor(args[0]->Uint32Value());
+			else {
+				return ThrowException(Exception::Error(
+					String::New("Invalid number and/or types of arguments")
+				));
+			}
+
+			return scope.Close(Integer::New(ret));
+		}
+
+		static Handle<Value> Colorbg (const Arguments& args) {
+			HandleScope scope;
+
+			int ret;
+			if (args.Length() == 1 && args[0]->IsUint32())
+				ret = MyPanel::getBgcolor(args[0]->Uint32Value());
+			else {
+				return ThrowException(Exception::Error(
+					String::New("Invalid number and/or types of arguments")
+				));
+			}
+
+			return scope.Close(Integer::New(ret));
+		}
+
+		static Handle<Value> Copywin (const Arguments& args) {
+			Window *win = ObjectWrap::Unwrap<Window>(args.This());
+			HandleScope scope;
+			int ret;
+			if (args.Length() == 7 && args[1]->IsUint32() && args[2]->IsUint32()
+			    && args[3]->IsUint32() && args[4]->IsUint32() && args[5]->IsUint32() && args[6]->IsUint32())
+				ret = win->panel()->copywin(*(ObjectWrap::Unwrap<Window>(args[0]->ToObject())->panel()), args[1]->Uint32Value(), args[2]->Uint32Value(), args[3]->Uint32Value(), args[4]->Uint32Value(), args[5]->Uint32Value(), args[6]->Uint32Value());
+
+			else if (args.Length() == 8 && args[1]->IsUint32() && args[2]->IsUint32()
+			    && args[3]->IsUint32() && args[4]->IsUint32() && args[5]->IsUint32() && args[6]->IsUint32()
+			    && args[7]->IsBoolean())
+				ret = win->panel()->copywin(*(ObjectWrap::Unwrap<Window>(args[0]->ToObject())->panel()), args[1]->Uint32Value(), args[2]->Uint32Value(), args[3]->Uint32Value(), args[4]->Uint32Value(), args[5]->Uint32Value(), args[6]->Uint32Value(), args[7]->BooleanValue());
+			else {
+				return ThrowException(Exception::Error(
+					String::New("Invalid number and/or types of arguments")
+				));
+			}
+
+			return scope.Close(Integer::New(ret));
 		}
 
 		// -- Getters/Setters -----------------------------------------------------------------------
 		static Handle<Value> EchoStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
-			assert(win);
 			assert(property == ECHO_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Boolean::New(MyPanel::echo()));
 		}
 		
 		static void EchoStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
-			assert(win);
 			assert(property == ECHO_STATE_SYMBOL);
 
 			if (!value->IsBoolean()) {
@@ -1379,18 +1763,14 @@ class ncWindow : public EventEmitter {
 		}
 
 		static Handle<Value> ShowcursorStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
-			assert(win);
 			assert(property == SHOWCURSOR_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Boolean::New(MyPanel::showCursor()));
 		}
 		
 		static void ShowcursorStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
-			assert(win);
 			assert(property == SHOWCURSOR_STATE_SYMBOL);
 
 			if (!value->IsBoolean()) {
@@ -1398,227 +1778,207 @@ class ncWindow : public EventEmitter {
 					String::New("showCursor should be of Boolean value")
 				));
 			}
-
 			MyPanel::showCursor(value->BooleanValue());
 		}
 
 		static Handle<Value> LinesStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
-			assert(win);
 			assert(property == LINES_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
-			return scope.Close(Integer::New(win->panel()->lines()));
+
+			return scope.Close(Integer::New(LINES));
 		}
 
 		static Handle<Value> ColsStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
-			assert(win);
 			assert(property == COLS_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
-			return scope.Close(Integer::New(win->panel()->cols()));
+
+			return scope.Close(Integer::New(COLS));
 		}
 
 		static Handle<Value> TabsizeStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
-			assert(win);
 			assert(property == TABSIZE_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
-			return scope.Close(Integer::New(win->panel()->tabsize()));
+
+			return scope.Close(Integer::New(TABSIZE));
 		}
 
 		static Handle<Value> HasmouseStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			Window *win = ObjectWrap::Unwrap<Window>(info.This());
 			assert(win);
 			assert(property == HASMOUSE_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Integer::New(win->panel()->has_mouse()));
 		}
 
 		static Handle<Value> HiddenStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			Window *win = ObjectWrap::Unwrap<Window>(info.This());
 			assert(win);
 			assert(property == HIDDEN_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Boolean::New(win->panel()->hidden()));
 		}
 
 		static Handle<Value> HeightStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			Window *win = ObjectWrap::Unwrap<Window>(info.This());
 			assert(win);
 			assert(property == HEIGHT_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Integer::New(win->panel()->height()));
 		}
 
 		static Handle<Value> WidthStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			Window *win = ObjectWrap::Unwrap<Window>(info.This());
 			assert(win);
 			assert(property == WIDTH_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Integer::New(win->panel()->width()));
 		}
 
 		static Handle<Value> BegxStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			Window *win = ObjectWrap::Unwrap<Window>(info.This());
 			assert(win);
 			assert(property == BEGX_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Integer::New(win->panel()->begx()));
 		}
 
 		static Handle<Value> BegyStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			Window *win = ObjectWrap::Unwrap<Window>(info.This());
 			assert(win);
 			assert(property == BEGY_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Integer::New(win->panel()->begy()));
 		}
 
 		static Handle<Value> CurxStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			Window *win = ObjectWrap::Unwrap<Window>(info.This());
 			assert(win);
 			assert(property == CURX_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Integer::New(win->panel()->curx()));
 		}
 
 		static Handle<Value> CuryStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			Window *win = ObjectWrap::Unwrap<Window>(info.This());
 			assert(win);
 			assert(property == CURY_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Integer::New(win->panel()->cury()));
 		}
 
 		static Handle<Value> MaxxStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			Window *win = ObjectWrap::Unwrap<Window>(info.This());
 			assert(win);
 			assert(property == MAXX_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Integer::New(win->panel()->maxx()));
 		}
 
 		static Handle<Value> MaxyStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			Window *win = ObjectWrap::Unwrap<Window>(info.This());
 			assert(win);
 			assert(property == MAXY_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Integer::New(win->panel()->maxy()));
 		}
 
 		static Handle<Value> BkgdStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			Window *win = ObjectWrap::Unwrap<Window>(info.This());
 			assert(win);
 			assert(property == BKGD_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Integer::NewFromUnsigned(win->panel()->getbkgd()));
 		}
 
 		static void BkgdStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			Window *win = ObjectWrap::Unwrap<Window>(info.This());
 			assert(win);
 			assert(property == BKGD_STATE_SYMBOL);
+			unsigned int val = 32;
 
-			if (!value->IsUint32()) {
+			if (!value->IsUint32() && !value->IsString()) {
 				ThrowException(Exception::TypeError(
-					String::New("bkgd should be of unsigned integer value")
+					String::New("bkgd should be of unsigned integer or a string value")
 				));
 			}
-			
-			win->panel()->bkgd(value->Uint32Value());
+			if (value->IsString()) {
+			  String::AsciiValue str(value->ToString());
+			  if (str.length() > 0)
+			    val = (unsigned int)((*str)[0]);
+			} else
+			  val = value->Uint32Value();
+
+			win->panel()->bkgd(val);
 		}
 
 		static Handle<Value> HascolorsStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
-			assert(win);
 			assert(property == HASCOLORS_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Boolean::New(MyPanel::has_colors()));
 		}
 
 		static Handle<Value> NumcolorsStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
-			assert(win);
 			assert(property == NUMCOLORS_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Integer::New(MyPanel::num_colors()));
 		}
 
 		static Handle<Value> MaxcolorpairsStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
-			assert(win);
 			assert(property == MAXCOLORPAIRS_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Integer::New(MyPanel::max_pairs()));
 		}
 
 		static Handle<Value> WintouchedStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
+			Window *win = ObjectWrap::Unwrap<Window>(info.This());
 			assert(win);
 			assert(property == WINTOUCHED_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Boolean::New(win->panel()->is_wintouched()));
 		}
 
-		static Handle<Value> ACSConstsGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
-			assert(win);
-			assert(property == ACS_CONSTS_SYMBOL);
-			
-			HandleScope scope;
-			
-			return scope.Close(ACS_Chars);
-		}
-
 		static Handle<Value> RawStateGetter (Local<String> property, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
-			assert(win);
 			assert(property == RAW_STATE_SYMBOL);
-			
+
 			HandleScope scope;
-			
+
 			return scope.Close(Boolean::New(MyPanel::raw()));
 		}
 		
 		static void RawStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
-			ncWindow *win = ObjectWrap::Unwrap<ncWindow>(info.This());
-			assert(win);
 			assert(property == RAW_STATE_SYMBOL);
 
 			if (!value->IsBoolean()) {
@@ -1630,23 +1990,54 @@ class ncWindow : public EventEmitter {
 			MyPanel::raw(value->BooleanValue());
 		}
 
-		ncWindow() : EventEmitter() {
+		static Handle<Value> ACSConstsGetter (Local<String> property, const AccessorInfo& info) {
+			HandleScope scope;
+
+			return scope.Close(ACS_Chars);
+		}
+
+		static Handle<Value> KeyConstsGetter (Local<String> property, const AccessorInfo& info) {
+			HandleScope scope;
+
+			return scope.Close(Keys);
+		}
+
+		static Handle<Value> ColorConstsGetter (Local<String> property, const AccessorInfo& info) {
+			HandleScope scope;
+
+			return scope.Close(Colors);
+		}
+
+		static Handle<Value> AttrConstsGetter (Local<String> property, const AccessorInfo& info) {
+			HandleScope scope;
+
+			return scope.Close(Attrs);
+		}
+
+		static Handle<Value> NumwinsGetter (Local<String> property, const AccessorInfo& info) {
+			HandleScope scope;
+
+      return scope.Close(Integer::New(wincounter));
+		}
+
+		Window() : EventEmitter() {
 			panel_ = NULL;
 			this->init();
 			assert(panel_ != NULL);
 		}
 		
-		ncWindow(int nlines, int ncols, int begin_y, int begin_x) : EventEmitter() {
+		Window(int nlines, int ncols, int begin_y, int begin_x) : EventEmitter() {
 			panel_ = NULL;
 			this->init(nlines, ncols, begin_y, begin_x);
 			assert(panel_ != NULL);
 		}
 		
-		~ncWindow() {
-			if (panel_) {
-				this->close();
-			}
-			assert(panel_ == NULL);
+		~Window() {
+    //appendLog("~Window()");
+			//if (panel_) {
+				//this->close();
+			//}
+			//assert(panel_ == NULL);
 		}
 		
 	private:
@@ -1655,24 +2046,28 @@ class ncWindow : public EventEmitter {
 				return;
 
 			if (revents & EV_READ) {
-				HandleScope scope;
-
 				int chr;
 				char tmp[2];
 				tmp[1] = 0;
-				while ((chr = this->panel()->getch()) != ERR) {
+				while ((chr = getch()) != ERR) {
+				  // 410 == KEY_RESIZE
+				  if (chr == 410 || !topmost_panel || !topmost_panel->getWindow() || !topmost_panel->getPanel()) {
+				    //if (chr != 410)
+				    //  ungetch(chr);
+				    return;
+				  }
 					tmp[0] = chr;
 					Local<Value> vChr[2];
 					vChr[0] = String::New(tmp);
 					vChr[1] = Integer::New(chr);
-					Emit(inputChar_symbol, 2, vChr);
+					topmost_panel->getWindow()->Emit(inputChar_symbol, 2, vChr);
 				}
 			}
 		}
 
 		static void
 		io_event (EV_P_ ev_io *w, int revents) {
-			ncWindow *win = static_cast<ncWindow*>(w->data);
+			Window *win = static_cast<Window*>(w->data);
 			win->Event(revents);
 		}
 		
@@ -1683,5 +2078,5 @@ class ncWindow : public EventEmitter {
 extern "C" void
 init (Handle<Object> target) {
 	HandleScope scope;
-	ncWindow::Initialize(target);
+	Window::Initialize(target);
 }

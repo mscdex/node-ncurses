@@ -2,7 +2,7 @@
 #
 # MKlib_gen.sh -- generate sources from curses.h macro definitions
 #
-# ($Id: MKlib_gen.sh,v 1.40 2010/03/30 22:42:16 tom Exp $)
+# ($Id: MKlib_gen.sh,v 1.42 2011/01/01 22:06:52 tom Exp $)
 #
 ##############################################################################
 # Copyright (c) 1998-2009,2010 Free Software Foundation, Inc.                #
@@ -200,6 +200,7 @@ $0 !~ /^P_/ {
 		}
 	}
 	second = first + 1;
+	returnCast = "";
 	if ( $first == "chtype" ) {
 		returnType = "Chtype";
 	} else if ( $first == "SCREEN" ) {
@@ -207,7 +208,8 @@ $0 !~ /^P_/ {
 	} else if ( $first == "WINDOW" ) {
 		returnType = "Win";
 	} else if ( $first == "attr_t" || $second == "attrset" || $second == "standout" || $second == "standend" || $second == "wattrset" || $second == "wstandout" || $second == "wstandend" ) {
-		returnType = "Attr";
+		returnType = "IntAttr";
+		returnCast = "(attr_t)";
 	} else if ( $first == "bool" || $first == "NCURSES_BOOL" ) {
 		returnType = "Bool";
 	} else if ( $second == "*" ) {
@@ -264,24 +266,26 @@ $0 !~ /^P_/ {
 	argtype = ""
 	for (i = myfunc; i <= NF; i++) {
 		ch = $i;
-		if ( ch == "*" )
+		if ( ch == "*" ) {
 			pointer = 1;
-		else if ( ch == "va_list" )
+		} else if ( ch == "va_list" ) {
 			va_list = 1;
-		else if ( ch == "..." )
+		} else if ( ch == "..." ) {
 			varargs = 1;
-		else if ( ch == "char" )
+		} else if ( ch == "char" ) {
 			argtype = "char";
-		else if ( ch == "int" )
+		} else if ( ch == "int" ) {
 			argtype = "int";
-		else if ( ch == "short" )
+		} else if ( ch == "short" ) {
 			argtype = "short";
-		else if ( ch == "chtype" )
+		} else if ( ch == "chtype" ) {
 			argtype = "chtype";
-		else if ( ch == "attr_t" || ch == "NCURSES_ATTR_T" )
+		} else if ( ch == "attr_t" || ch == "NCURSES_ATTR_T" ) {
 			argtype = "attr";
+		}
 
 		if ( ch == "," || ch == ")" ) {
+			argcast = "";
 			if (va_list) {
 				call = call "%s"
 			} else if (varargs) {
@@ -302,6 +306,9 @@ $0 !~ /^P_/ {
 				} else if ( argtype != "" ) {
 					call = call "%s"
 					comma = comma "_trace" argtype "2(" num ","
+					if (argtype == "attr") {
+						argcast = "(chtype)";
+					}
 				} else {
 					call = call "%#lx"
 					comma = comma "(long)"
@@ -315,7 +322,7 @@ $0 !~ /^P_/ {
 				} else if ( varargs ) {
 					args = args comma "\"...\""
 				} else {
-					args = args comma "z"
+					args = args comma argcast "z"
 				}
 			}
 			call = call ch
@@ -337,12 +344,16 @@ $0 !~ /^P_/ {
 	if (dotrace)
 		printf "%s", call
 
-	if (match($0, "^void"))
+	if (match($0, "^void")) {
 		call = ""
-	else if (dotrace)
+	} else if (dotrace) {
 		call = sprintf("return%s( ", returnType);
-	else
+		if (returnCast != "") {
+			call = call returnCast;
+		}
+	} else {
 		call = "@@return ";
+	}
 
 	call = call $myfunc "(";
 	for (i = 1; i < argcount; i++) {
@@ -357,8 +368,9 @@ $0 !~ /^P_/ {
 	}
 	if (!match($0, "^void"))
 		call = call ") ";
-	if (dotrace)
+	if (dotrace) {
 		call = call ")";
+	}
 	print call ";"
 
 	if (match($0, "^void"))

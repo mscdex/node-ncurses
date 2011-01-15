@@ -1,0 +1,18 @@
+* Find out why after calling endwin and refresh, the LINES and COLS globals are
+  not updated appropriately after SIGWINCH.
+  Also, ncurses' SIGWINCH handler that is included by default during build time
+  does not cause a keyboard event to fire when it inserts KEY_RESIZE into the
+  keyboard buffer, it merely uses ungetch to push it onto the top of the buffer.
+
+* Support screen saving and loading via scr_dump/scr_restore and window saving
+  and loading via putwin/getwin
+
+* Mouse support
+
+* Add more useful widgets
+
+* More tests/examples
+
+* Improve IRC client example
+
+* Add option to wscript to allow use of a shared ncurses library instead

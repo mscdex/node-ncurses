@@ -17,44 +17,108 @@ To build node-curses:
 Terminology
 ===========
 
-Functions that accept window/screen coordinates have the "x" and "y" parameters reversed so that it's "y" and then "x." It seems a bit unintuitive at first, but after you remember that the "y" axis is just rows and the "x" is the columns and [0,0] is the top-left corner of the screen, it doesn't take long to remember the order since the "row, column" format is used in a lot of other places outside of ncurses.
+Functions that accept window/screen coordinates use a "row, column" format.
 
-With that said, from here on out I'll be using the terms **"row" and "column" instead of "y" and "x", respectively**.
-
-Also, **stdscr** is the name of the first window that is created and fills the terminal/screen by default.
+Also, **stdscr** is the name of the first window that is created and fills the terminal/screen by default. It cannot be resized or moved, it is always the bottom-most window, and it is the window you get when you first create a new **Window**.
 
 
 API Documentation
 =================
 
-node-ncurses exposes only one class: **ncWindow**.
+node-ncurses exposes only one class: **Window**.
 
 #### Special data types
 
-* _Result_ is simply an integer indicating success or failure of the function. In ncurses land this is either the OK (0) or ERR (-1) constant.
+* _Result_ is simply an integer indicating success or failure of the function. 0 for success or -1 for error.
 
-* _Attributes_ is an unsigned integer used as a bitmask for holding window attributes (see ncconsts.js for the available values).
+* _Attributes_ is an (unsigned) integer used as a bitmask for holding window attributes. All available attributes are stored in the 'attrs' property of the module.
 
-* _ACS_Character_ is a special character used when dealing with line graphics. These are automatically determined at runtime by ncurses and thus cannot be defined as constants. Instead, they are accessible statically via the ncWindow class after at least one window has been created (so that ncurses has initialized this special character set). See the **Additional notes** at the bottom for a list of the available characters.
-    * An _ACS_Character_ can currently be retrieved by using the ACS property of an ncWindow instance (i.e. "var win = new ncWindow(); win.hline(win.cols, win.ACS.DIAMOND);")
+* _ACS\_Character_ is a special character used when dealing with line graphics. These are automatically determined at runtime by ncurses and thus cannot be defined as constants. Instead, they are accessible statically via the Window class after at least one window has been created (so that ncurses has initialized this special character set). See the **Additional notes** at the bottom for a list of the available characters.
+    * An _ACS\_Character_ can currently be retrieved by using the 'ACS' property of the module (example: "var nc = require('./ncurses'), win = new Window(); win.hline(nc.cols, nc.ACS.DIAMOND);")
 
 
-ncWindow Events
----------------
-
-* **inputChar**(String, Integer) - Called when the user has pressed a key on the keyboard. The first parameter is a string containing the character and the second parameter is the integer value of the character.
-
-ncWindow Functions
-------------------
-
-#### Global/Terminal-specific
+Module Functions
+---------------- 
 
 * **colorPair**(Integer[, Integer, Integer]) - _Integer_ - The first value specifies a color pair number in the color palette. If the second and third values are provided, that color pair's foreground and background colors are set respectively. The color pair number is always returned.
 
-* **resetScreen**() - _(void)_ - Restores the terminal after using ncurses. This function is automatically called when the last window is closed and thus should never be used except when handling unexpected exceptions (i.e. in node.js's uncaughtException event) so that you can safely restore the terminal back to normal.
+* **colorFg**(Integer) - _Integer_ - Returns the foreground color currently set for the supplied color pair.
+
+* **colorBg**(Integer) - _Integer_ - Returns the background color currently set for the supplied color pair.
+
+* **cleanup**() - _(void)_ - Restores the terminal after using ncurses. This function is automatically called when the last window is closed and thus should never be used except when handling unexpected exceptions (i.e. in node.js's uncaughtException event) so that you can safely restore the terminal back to normal.
+
+* **redraw**() - _(void)_ - Redraws all windows.
+
+* **flash**() - _(void)_ - Flashes the screen.
+
+* **bell**() - _(void)_ - Sounds the terminal bell.
+
+* **leave**() - _(void)_ - Saves the current state of ncurses in memory and exits ncurses.
+
+* **restore**() - _(void)_ - Restores the state saved by **leave** and updates the screen appropriately.
 
 
-#### Window-specific
+Module Properties
+-----------------
+
+* **ACS** - _Object_ [Read-only] - Contains a map of all of the available ACS characters keyed by their character names
+
+* **attrs** - _Object_ [Read-only] - Contains all of the available terminal attributes:
+    * _NORMAL_ - normal display
+    * _STANDOUT_ - "best" highlighting mode of the terminal
+    * _UNDERLINE_ - underlining
+    * _REVERSE_ - reverses the foreground and background colors
+    * _BLINK_ - blinking
+    * _DIM_ - half bright
+    * _BOLD_ - extra bright or bold
+    * _INVISIBLE_ - invisible or blank mode
+    * _PROTECT_ - protected mode (unsure of the real behavior for this one)
+
+* **colors** - _Object_ [Read-only] - Contains a map of names to the basic 8 ANSI colors:
+    * _BLACK_
+    * _RED_
+    * _GREEN_
+    * _YELLOW_
+    * _BLUE_
+    * _MAGENTA_
+    * _CYAN_
+    * _WHITE_
+    * Additional colors (if available) can be accessed by using their numerical value instead (the above list is 0 through 7 and 8 through 15 -- if available -- are generally the bright/bold versions of the above list)
+
+* **keys** - _Object_ [Read-only] - Contains a map of keys on the keyboard (this is a long list -- see "Additional Notes" for all mapped keys)
+
+* **numwins** - _Integer_ [Read-only] - Returns the number of currently open windows.
+
+* **echo** - _Boolean_ [Read/Write] - Enable/disable local echoing of keyboard input
+
+* **showCursor** - _Boolean_ [Read/Write] - Show/hide the cursor
+
+* **raw** - _Boolean_ [Read/Write] - Enable/disable terminal's raw mode
+
+* **lines** - _Integer_ [Read-only] - The total number of rows of the terminal
+
+* **cols** - _Integer_ [Read-only] - The total number of columns of the terminal
+
+* **tabsize** - _Integer_ [Read-only] - The terminal's tab size
+
+* **hasMouse** - _Boolean_ [Read-only] - Indicates whether the terminal supports mouse (clicks) functionality
+
+* **hasColors** - _Boolean_ [Read-only] - Indicates whether the terminal supports colors
+
+* **numColors** - _Integer_ [Read-only] - Indicates the (maximum) number of colors the terminal supports colors
+
+* **maxColorPairs** - _Integer_ [Read-only] - The maximum number of foreground-background color pairs supported by the terminal
+
+
+Window Events
+-------------
+
+* **inputChar**(String, Integer) - Called when the user has pressed a key on the keyboard. The first parameter is a string containing the character and the second parameter is the integer value of the character.
+
+
+Window Functions
+----------------
 
 * **clearok**(Boolean) - _Result_ - If _true_ is passed in, the next call to **refresh**() will clear the screen completely and redraw the entire screen from scratch.
 
@@ -90,8 +154,6 @@ ncWindow Functions
 
 * **refresh**() - _Result_ - Update the physical screen to match that of the virtual screen.
 
-* **redraw**() - _(void)_ - Redraws all windows.
-
 * **frame**([String[, String]]) - _(void)_ - Draws a frame around the window and calls **label**() with the optional parameters.
 
 * **boldframe**([String[, String]]) - _(void)_ - Same as **frame**(), except the frame is highlighted.
@@ -107,7 +169,8 @@ ncWindow Functions
 * **insdelln**([Integer=1]) - _Result_ - If the passed in value is greater than zero, that many rows will be inserted above the current row. If the passed in value is less than zero, that many rows are deleted, beginning with the current row.
 
 * **insstr**(String[, Integer=-1]) - _Result_ - Insert the string into the window before the current cursor position. Insert stops at the end of the string or when the limit indicated by the second parameter is reached. If the second parameter is negative, the limit is ignored.
-    * **insstr**(Integer, Integer, String[, Integer=-1]) - _Result_ - Moves the cursor to the row and column specified by the first two parameters respectively, then calls the version of **insstr**() above with the rest of the parameters.
+
+* **insstr**(Integer, Integer, String[, Integer=-1]) - _Result_ - Moves the cursor to the row and column specified by the first two parameters respectively, then calls the version of **insstr**() above with the rest of the parameters.
 
 * **attron**(Attributes) - _Result_ - Switch on the specified window attributes.
 
@@ -117,13 +180,17 @@ ncWindow Functions
 
 * **attrget**() - _Attributes_ - Get the window's current set of attributes.
 
+* **chgat**(Integer, Attributes[, Integer]) - _Result_ - Changes the attributes of the next n characters specified by the first parameter (starting at the current cursor position) to have the attributes given by the second parameter. The optional third parameter is used for specifying a color to use (defaults to the Window's current color pair).
+
+* **chgat**(Integer, Integer, Integer, Attributes[, Integer]) - _Result_ - Same as the above, except the first two parameters specify window coordinates to start at.
+
 * **box**([ACS_Character=0[, ACS_Character=0]]) - _Result_ - Draws a box around the window using the optionally specified parameters as the vertical and horizontal characters respectively. If a zero is given for any of the parameters, ncurses will use the POSIX default characters instead (See **Additional notes**).
 
-* **border**([ACS_Character=0[, ACS_Character=0[, ACS_Character=0[, ACS_Character=0[, ACS_Character=0[, ACS_Character=0[, ACS_Character=0[, ACS_Character=0]]]]]]]]) - _Result_ - Draws a border around the window using the optionally specified parameters as the left, right, top, bottom, top left, top right, bottom left, bottom right characters respectively. If a zero is given for any of the parameters, ncurses will use the POSIX default characters instead (See **Additional notes**).
+* **border**([ACS\_Character=0[, ACS\_Character=0[, ACS\_Character=0[, ACS\_Character=0[, ACS\_Character=0[, ACS\_Character=0[, ACS\_Character=0[, ACS\_Character=0]]]]]]]]) - _Result_ - Draws a border around the window using the optionally specified parameters as the left, right, top, bottom, top left, top right, bottom left, bottom right characters respectively. If a zero is given for any of the parameters, ncurses will use the POSIX default characters instead (See **Additional notes**).
 
-* **hline**(Integer[, ACS_Character=0]) - _Result_ - Draws a horizontal line on the current row whose length is determined by the first parameter. The second parameter specifies the character to be used when drawing the line. If a zero is given for the second parameter, ncurses will use the POSIX default characters instead (See **Additional notes**).
+* **hline**(Integer[, ACS\_Character=0]) - _Result_ - Draws a horizontal line on the current row whose length is determined by the first parameter. The second parameter specifies the character to be used when drawing the line. If a zero is given for the second parameter, ncurses will use the POSIX default characters instead (See **Additional notes**).
 
-* **vline**(Integer[, ACS_Character=0]) - _Result_ - Draws a vertical line on the current column whose length is determined by the first parameter. The second parameter specifies the character to be used when drawing the line. If a zero is given for the second parameter, ncurses will use the POSIX default characters instead (See **Additional notes**).
+* **vline**(Integer[, ACS\_Character=0]) - _Result_ - Draws a vertical line on the current column whose length is determined by the first parameter. The second parameter specifies the character to be used when drawing the line. If a zero is given for the second parameter, ncurses will use the POSIX default characters instead (See **Additional notes**).
 
 * **erase**() - _Result_ - Copies blanks to every position in the window, clearing the screen.
 
@@ -134,7 +201,8 @@ ncWindow Functions
 * **clrtoeol**() - _Result_ - Clears to the end of the current row.
 
 * **delch**() - _Result_ - Deletes the character under the cursor.
-    * **delch**(Integer, Integer) - _Result_ - Moves the cursor to the row and column specified by the first two parameters respectively, then calls the version of **delch**() above with the rest of the parameters.
+
+* **delch**(Integer, Integer) - _Result_ - Moves the cursor to the row and column specified by the first two parameters respectively, then calls the version of **delch**() above with the rest of the parameters.
 
 * **deleteln**() - _Result_ - Deletes the current row.
 
@@ -144,7 +212,7 @@ ncWindow Functions
 
 * **touchlines**(Integer, Integer[, Boolean=true]) - _Result_ - Marks rows as having been modified or unmodified. The first parameter is the starting row. The second parameter is the number of rows after the starting row. If the third parameter is true, then the lines are marked as modified, otherwise they are marked as unmodified.
 
-* **is_linetouched**(Integer) - _Boolean_ - Indicates whether the specified row has been marked as modified.
+* **is\_linetouched**(Integer) - _Boolean_ - Indicates whether the specified row has been marked as modified.
 
 * **redrawln**(Integer, Integer) - _Result_ - Redraws a number of rows specified by the second parameter, starting with the row specified in the first parameter.
 
@@ -155,44 +223,39 @@ ncWindow Functions
 * **resize**(Integer, Integer) - _Result_ - Resizes the window to the specified number of rows and columns respectively.
 
 * **print**(String) - _Result_ - Writes the specified string at the current cursor position.
-    * **print**(Integer, Integer, String) - _Result_ - Moves the cursor to the row and column specified by the first two parameters respectively, then calls the version of **print**() above with the rest of the parameters.
+
+* **print**(Integer, Integer, String) - _Result_ - Moves the cursor to the row and column specified by the first two parameters respectively, then calls the version of **print**() above with the rest of the parameters.
 
 * **addstr**(String[, Integer=-1]) - _Result_ - Writes the specified string at the current cursor position. Writing stops at the end of the string or when the limit indicated by the second parameter is reached. If the second parameter is negative, the limit is ignored.
-    * **addstr**(Integer, Integer, String[, Integer=-1]) - _Result_ - Moves the cursor to the row and column specified by the first two parameters respectively, then calls the version of **addstr**() above with the rest of the parameters.
+
+* **addstr**(Integer, Integer, String[, Integer=-1]) - _Result_ - Moves the cursor to the row and column specified by the first two parameters respectively, then calls the version of **addstr**() above with the rest of the parameters.
 
 * **close**() - _Result_ - Destroys the window and any of its children. **Only** call this **once** and when you are completely finished with the window.
 
 
-ncWindow Properties
+Window Properties
 -------------------
 
-#### Global/Terminal-specific
-
-* **echo** - _Boolean_ [Read/Write] - Enable/disable local echoing of keyboard input
-* **showCursor** - _Boolean_ [Read/Write] - Show/hide the cursor
-* **raw** - _Boolean_ [Read/Write] - Enable/disable terminal's raw mode
-* **lines** - _Integer_ [Read-only] - The total number of rows of the terminal
-* **cols** - _Integer_ [Read-only] - The total number of columns of the terminal
-* **tabsize** - _Integer_ [Read-only] - The terminal's tab size
-* **hasMouse** - _Boolean_ [Read-only] - Indicates whether the terminal supports mouse (clicks) functionality
-* **hasColors** - _Boolean_ [Read-only] - Indicates whether the terminal supports colors
-* **numColors** - _Integer_ [Read-only] - Indicates the (maximum) number of colors the terminal supports colors
-* **maxColorPairs** - _Integer_ [Read-only] - The maximum number of foreground-background color pairs supported by the terminal
-* **ACS** - _Array_ [Read-only] - Contains a hash of all of the available ACS characters (for line graphics) described in the **Additional notes** section of this README
-
-
-#### Window-specific
-
 * **bkgd** - _Attributes_ [Read/Write] - Get/set the window's background attributes
+
 * **hidden** - _Boolean_ [Read-only] - Is this window hidden?
+
 * **height** - _Integer_ [Read-only] - Current window height
+
 * **width** - _Integer_ [Read-only] - Current window width
+
 * **begx** - _Integer_ [Read-only] - Column of the top-left corner of the window, relative to stdscr
+
 * **begy** - _Integer_ [Read-only] - Row of the top-left corner of the window, relative to stdscr
+
 * **curx** - _Integer_ [Read-only] - Column of the current cursor position
+
 * **cury** - _Integer_ [Read-only] - Row of the current cursor position
+
 * **maxx** - _Integer_ [Read-only] - Largest column number for this window
+
 * **maxy** - _Integer_ [Read-only] - Largest row number for this window
+
 * **touched** - _Integer_ [Read-only] - Indicates whether the window has been marked as modified
 
 
@@ -239,3 +302,112 @@ BOARD                 #         board of squares
 LANTERN               #         lantern symbol
 BLOCK                 #         solid square block
 </pre>
+
+
+Keyboard key names
+------------------
+
+Keys prefixed with 'S_' denote SHIFT + the key.
+
+* SPACE
+* NEWLINE (the real Enter key)
+* ESC
+* UP
+* DOWN
+* LEFT
+* RIGHT
+* HOME
+* BACKSPACE
+* BREAK
+* F0
+* F1
+* F2
+* F3
+* F4
+* F5
+* F6
+* F7
+* F8
+* F9
+* F10
+* F11
+* F12
+* DEL
+* INS
+* EIC
+* CLEAR
+* EOS
+* EOL
+* SF
+* SR
+* NPAGE (page down)
+* PPAGE (page up)
+* STAB
+* CTAB
+* CATAB
+* ENTER
+* SRESET
+* RESET
+* PRINT
+* LL
+* UPLEFT
+* UPRIGHT
+* CENTER
+* DOWNLEFT
+* DOWNRIGHT
+* BTAB
+* BEG
+* CANCEL
+* CLOSE
+* COMMAND
+* COPY
+* CREATE
+* END
+* EXIT
+* FIND
+* FIND
+* MARK
+* MESSAGE
+* MOVE
+* NEXT
+* OPEN
+* OPTIONS
+* PREVIOUS
+* REDO
+* REFERENCE
+* REFRESH
+* REPLACE
+* RESTART
+* RESUME
+* SAVE
+* SELECT
+* SEND
+* SUSPEND
+* S_BEG
+* S_CANCEL
+* S_COMMAND
+* S_COPY
+* S_CREATE
+* S_DC
+* S_DL
+* S_EOL
+* S_EXIT
+* S_FIND
+* S_HELP
+* S_HOME
+* S_IC
+* S_LEFT
+* S_MESSAGE
+* S_MOVE
+* S_NEXT
+* S_OPTIONS
+* S_PREVIOUS
+* S_PRINT
+* S_REDO
+* S_REPLACE
+* S_RIGHT
+* S_RESUME
+* S_SAVE
+* S_SUSPEND
+* S_UNDO
+* UNDO

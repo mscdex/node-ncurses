@@ -22,7 +22,7 @@ def configure(conf):
 
   # configure ncurses
   print "Configuring ncurses library ..."
-  cmd = "cd deps/ncurses && sh configure --without-debug --without-tests"
+  cmd = "cd deps/ncurses && sh configure --without-debug --without-tests --without-progs --without-ada --without-manpages --enable-widec --enable-ext-colors"
   if os.system(cmd) != 0:
     conf.fatal("Configuring ncurses failed.")
   else:
@@ -39,7 +39,7 @@ def build(bld):
     obj.source = 'ncurses.cc'
     obj.includes = [ncursesdir + '/include', ncursesdir + '/c++']
     obj.cxxflags = ['-O2']
-    obj.linkflags = [ncursesdir + '/lib/libncurses++.a', ncursesdir + '/lib/libpanel.a', ncursesdir + '/lib/libncurses.a']
+    obj.linkflags = [ncursesdir + '/lib/libncurses++w.a', ncursesdir + '/lib/libpanelw.a', ncursesdir + '/lib/libncursesw.a']
 
 def shutdown():
   # HACK to get ncurses.node out of build directory.

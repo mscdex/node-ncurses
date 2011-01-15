@@ -33,9 +33,8 @@
  *     and: Juergen Pfeifer                                                 *
  ****************************************************************************/
 
-
 /*
- * $Id: curses.priv.h,v 1.465 2010/08/28 20:56:48 tom Exp $
+ * $Id: curses.priv.h,v 1.472 2011/01/01 23:01:40 tom Exp $
  *
  *	curses.priv.h
  *
@@ -46,6 +45,7 @@
 
 #ifndef CURSES_PRIV_H
 #define CURSES_PRIV_H 1
+/* *INDENT-OFF* */
 
 #include <ncurses_dll.h>
 
@@ -346,7 +346,7 @@ color_t;
  */
 #if 1
 #define ColorPair(n)		NCURSES_BITS(n, 0)
-#define PairNumber(a)		(NCURSES_CAST(int,(((a) & A_COLOR) >> NCURSES_ATTR_SHIFT)))
+#define PairNumber(a)		(NCURSES_CAST(int,(((unsigned long)(a) & A_COLOR) >> NCURSES_ATTR_SHIFT)))
 #else
 #define ColorPair(pair)		COLOR_PAIR(pair)
 #define PairNumber(attr)	PAIR_NUMBER(attr)
@@ -383,11 +383,11 @@ color_t;
 
 #define if_EXT_COLORS(stmt)	/* nothing */
 #define SetPair(value,p)	RemAttr(value, A_COLOR), \
-				SetAttr(value, AttrOf(value) | (A_COLOR & ColorPair(p)))
+				SetAttr(value, AttrOf(value) | (A_COLOR & (attr_t) ColorPair(p)))
 #define GetPair(value)		PairNumber(AttrOf(value))
 #define GET_WINDOW_PAIR(w)	PairNumber(WINDOW_ATTRS(w))
 #define SET_WINDOW_PAIR(w,p)	WINDOW_ATTRS(w) &= ALL_BUT_COLOR, \
-				WINDOW_ATTRS(w) |= (A_COLOR & ColorPair(p))
+				WINDOW_ATTRS(w) |= (A_COLOR & (attr_t) ColorPair(p))
 #define SameAttrOf(a,b)		(AttrOf(a) == AttrOf(b))
 
 #if NCURSES_SP_FUNCS
@@ -1175,7 +1175,7 @@ extern NCURSES_EXPORT_VAR(SIG_ATOMIC_T) _nc_have_sigwinch;
 #endif
 };
 
-#define WINDOW_EXT(w,m) (((WINDOWLIST *)((char *)(w) - offsetof(WINDOWLIST, win)))->m)
+#define WINDOW_EXT(w,m) (((WINDOWLIST *)((void *)((char *)(w) - offsetof(WINDOWLIST, win))))->m)
 
 #define SP_PRE_INIT(sp)                         \
     sp->_cursrow = -1;                          \
@@ -1310,7 +1310,7 @@ extern NCURSES_EXPORT_VAR(SIG_ATOMIC_T) _nc_have_sigwinch;
 #define SetChar(ch,c,a) do {							    \
 			    NCURSES_CH_T *_cp = &ch;				    \
 			    memset(_cp, 0, sizeof(ch));				    \
-			    _cp->chars[0] = (c);					    \
+			    _cp->chars[0] = (wchar_t) (c);			    \
 			    _cp->attr = (a);					    \
 			    if_EXT_COLORS(SetPair(ch, PairNumber(a)));		    \
 			} while (0)
@@ -1331,8 +1331,8 @@ extern NCURSES_EXPORT_VAR(SIG_ATOMIC_T) _nc_have_sigwinch;
 				PUTC_ch = (ch).chars[PUTC_i];			    \
 				if (PUTC_ch == L'\0')				    \
 				    break;					    \
-				PUTC_n = wcrtomb(PUTC_buf,			    \
-						 (ch).chars[PUTC_i], &PUT_st);	    \
+				PUTC_n = (int) wcrtomb(PUTC_buf,		    \
+						       (ch).chars[PUTC_i], &PUT_st); \
 				if (PUTC_n <= 0) {				    \
 				    if (PUTC_ch && is8bits(PUTC_ch) && PUTC_i == 0) \
 					putc(PUTC_ch,b);			    \
@@ -1354,7 +1354,7 @@ extern NCURSES_EXPORT_VAR(SIG_ATOMIC_T) _nc_have_sigwinch;
 	 * zero.  Otherwise we can use those bits to tell if a cell is the
 	 * first or extension part of a wide character.
 	 */
-#define WidecExt(ch)	(AttrOf(ch) & A_CHARTEXT)
+#define WidecExt(ch)	(int) (AttrOf(ch) & A_CHARTEXT)
 #define isWidecBase(ch)	(WidecExt(ch) == 1)
 #define isWidecExt(ch)	(WidecExt(ch) > 1 && WidecExt(ch) < 32)
 #define SetWidecExt(dst, ext)	AttrOf(dst) &= ~A_CHARTEXT,		\
@@ -1420,16 +1420,16 @@ extern NCURSES_EXPORT_VAR(SIG_ATOMIC_T) _nc_have_sigwinch;
 #define CHANGED_RANGE(line,start,end) \
 	if (line->firstchar == _NOCHANGE \
 	 || line->firstchar > (start)) \
-		line->firstchar = start; \
+		line->firstchar = (NCURSES_SIZE_T) start; \
 	if (line->lastchar == _NOCHANGE \
 	 || line->lastchar < (end)) \
-		line->lastchar = end
+		line->lastchar = (NCURSES_SIZE_T) end
 
 #define CHANGED_TO_EOL(line,start,end) \
 	if (line->firstchar == _NOCHANGE \
 	 || line->firstchar > (start)) \
-		line->firstchar = start; \
-	line->lastchar = end
+		line->firstchar = (NCURSES_SIZE_T) start; \
+	line->lastchar = (NCURSES_SIZE_T) end
 
 #define SIZEOF(v) (sizeof(v)/sizeof(v[0]))
 
@@ -1505,7 +1505,9 @@ extern NCURSES_EXPORT(void)	_nc_locked_tracef (const char *, ...) GCC_PRINTFLIKE
 
 #define TR(n, a)	if (USE_TRACEF(n)) _nc_locked_tracef a
 #define T(a)		TR(TRACE_CALLS, a)
-#define TRACE_RETURN(value,type) return _nc_retrace_##type(value)
+#define TRACE_RETURN(value,type)     return _nc_retrace_##type(value)
+#define TRACE_RETURN2(value,dst,src) return _nc_retrace_##dst##_##src(value)
+#define TRACE_RETURN_SP(value,type)  return _nc_retrace_##type(SP_PARM, value)
 
 #define NonNull(s)	((s) != 0 ? s : "<null>")
 
@@ -1517,6 +1519,8 @@ extern NCURSES_EXPORT(void)	_nc_locked_tracef (const char *, ...) GCC_PRINTFLIKE
 #define returnChar(code)	TRACE_RETURN(code,char)
 #define returnChtype(code)	TRACE_RETURN(code,chtype)
 #define returnCode(code)	TRACE_RETURN(code,int)
+#define returnIntAttr(code)	TRACE_RETURN2(code,int,attr_t)
+#define returnMMask(code)	TRACE_RETURN_SP(code,mmask_t)
 #define returnPtr(code)		TRACE_RETURN(code,ptr)
 #define returnSP(code)		TRACE_RETURN(code,sp)
 #define returnVoid		T((T_RETURN(""))); return
@@ -1536,6 +1540,8 @@ extern NCURSES_EXPORT(const char *)     _nc_altcharset_name(attr_t, chtype);
 extern NCURSES_EXPORT(const char *)     _nc_retrace_cptr (const char *);
 extern NCURSES_EXPORT(char)             _nc_retrace_char (char);
 extern NCURSES_EXPORT(int)              _nc_retrace_int (int);
+extern NCURSES_EXPORT(int)              _nc_retrace_int_attr_t (attr_t);
+extern NCURSES_EXPORT(mmask_t)          _nc_retrace_mmask_t (SCREEN *, mmask_t);
 extern NCURSES_EXPORT(unsigned)         _nc_retrace_unsigned (unsigned);
 extern NCURSES_EXPORT(void *)           _nc_retrace_void_ptr (void *);
 extern NCURSES_EXPORT(void)             _nc_fifo_dump (SCREEN *);
@@ -1578,6 +1584,8 @@ extern NCURSES_EXPORT(const char *) _nc_viscbuf (const NCURSES_CH_T *, int);
 #define returnChar(code)	return ((char) code)
 #define returnChtype(code)	return code
 #define returnCode(code)	return code
+#define returnIntAttr(code)	return code
+#define returnMMask(code)	return code
 #define returnPtr(code)		return code
 #define returnSP(code)		return code
 #define returnVoid		return
@@ -1590,7 +1598,7 @@ extern NCURSES_EXPORT(const char *) _nc_viscbuf (const NCURSES_CH_T *, int);
  * Workaround for defective implementation of gcc attribute warn_unused_result
  */
 #if defined(__GNUC__) && defined(_FORTIFY_SOURCE)
-#define IGNORE_RC(func) errno = func
+#define IGNORE_RC(func) errno = (int) func
 #else
 #define IGNORE_RC(func) (void) func
 #endif /* gcc workarounds */
@@ -1615,9 +1623,9 @@ extern	NCURSES_EXPORT(void) name (void); \
 
 #define toggle_attr_on(S,at) {\
    if (PairNumber(at) > 0) {\
-      (S) = ((S) & ALL_BUT_COLOR) | (at);\
+      (S) = ((S) & ALL_BUT_COLOR) | (attr_t) (at);\
    } else {\
-      (S) |= (at);\
+      (S) |= (attr_t) (at);\
    }\
    TR(TRACE_ATTRS, ("new attribute is %s", _traceattr((S))));}
 
@@ -2297,5 +2305,7 @@ extern NCURSES_EXPORT(NCURSES_CONST char *) _nc_unctrl (SCREEN *, chtype);
 #ifdef __cplusplus
 }
 #endif
+
+/* *INDENT-ON* */
 
 #endif /* CURSES_PRIV_H */
