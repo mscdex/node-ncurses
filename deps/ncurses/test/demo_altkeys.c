@@ -94,9 +94,7 @@ main(int argc GCC_UNUSED, char *argv[]GCC_UNUSED)
     newterm(0, stdout, stdin);
     (void) cbreak();		/* take input chars one at a time, no wait for \n */
     (void) noecho();		/* don't echo input */
-			//nodelay(stdscr, true);
-			//nocbreak();
-			//halfdelay(1000);
+
     scrollok(stdscr, TRUE);
     keypad(stdscr, TRUE);
     move(0, 0);
