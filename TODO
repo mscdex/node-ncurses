@@ -13,6 +13,4 @@
 
 * More tests/examples
 
-* Improve IRC client example
-
 * Add option to wscript to allow use of a shared ncurses library instead

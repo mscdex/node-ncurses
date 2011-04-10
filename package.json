@@ -1,14 +1,11 @@
-{ "name" : "ncurses"
-, "version" : "0.1.0"
-, "author" : "Brian White <mscdex@mscdex.net>"
-, "description" : "An ncurses binding for node.js"
-, "scripts" : { "preinstall" : "node-waf configure build" }
-, "main" : "./ncurses"
-, "engines" : { "node" : ">0.1.93" }
-, "licenses" :
-  [ { "type" : "MIT"
-    , "url" : "http://github.com/mscdex/node-ncurses/raw/master/LICENSE"
-    }
-  ]
-, "repository" : { "type" : "git", "url" : "http://github.com/mscdex/node-ncurses.git" }
+{ "name": "ncurses",
+  "version": "0.2",
+  "author": "Brian White <mscdex@mscdex.net>",
+  "description": "An ncurses binding for node.js",
+  "scripts": { "preinstall": "node-waf configure build" },
+  "main": "./ncurses",
+  "engines": { "node": ">0.1.93" },
+  "keywords": [ "console", "ncurses", "curses", "graphics" ],
+  "licenses": [ { "type": "MIT", "url": "http://github.com/mscdex/node-ncurses/raw/master/LICENSE" } ],
+  "repository": { "type": "git", "url": "http://github.com/mscdex/node-ncurses.git" }
 }
