@@ -14,6 +14,19 @@ To build node-curses:
     node-waf configure build
 
 
+Troubleshooting
+===============
+
+If you encounter "Error opening terminal" while executing one of the examples or
+any other script that uses node-ncurses, do this:
+
+* Ensure you have built node-ncurses properly
+* Change to `deps/ncurses` in the source package
+* Execute `sudo make install.data`
+
+That should solve this particular problem.
+
+
 Terminology
 ===========
 
