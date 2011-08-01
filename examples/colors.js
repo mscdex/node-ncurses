@@ -8,7 +8,12 @@ function pad(num) {
     num = '0' + num;
   return num;
 }
-var w = new nc.Window();
+var w = new nc.Window(),
+    tmo;
+w.on('inputChar', function() {
+  clearTimeout(tmo);
+  w.close();
+});
 nc.showCursor = false;
 if (nc.hasColors) {
   var color = 0, pair = 1, breakout = false;
@@ -26,7 +31,7 @@ if (nc.hasColors) {
       break;
   }
   w.refresh();
-  setTimeout(function() { w.close(); }, 5000);
+  tmo = setTimeout(function() { w.close(); }, 5000);
 } else {
   w.close();
   console.log('Sorry, this example requires a terminal capable of displaying color.');

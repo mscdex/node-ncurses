@@ -13,7 +13,7 @@
 
 #include <cursesp.h>
 #include <node.h>
-#include <node_events.h>
+#include <node_object_wrap.h>
 
 #include <assert.h>
 #include <stdlib.h>
@@ -39,7 +39,7 @@ typedef struct {
 static panel_node* head_panel = NULL;
 static MyPanel* topmost_panel = NULL;
 
-static Persistent<String> inputChar_symbol;
+static Persistent<String> emit_symbol;
 static Persistent<Object> ACS_Chars;
 static Persistent<Object> Keys;
 static Persistent<Object> Attrs;
@@ -306,18 +306,14 @@ bool MyPanel::echoInput_ = false;
 bool MyPanel::showCursor_ = true;
 bool MyPanel::isRaw_ = false;
 
-class Window : public EventEmitter {
+class Window : public ObjectWrap {
   public:
     static void  Initialize (Handle<Object> target) {
       HandleScope scope;
       
       Local<FunctionTemplate> t = FunctionTemplate::New(New);
-      
-      t->Inherit(EventEmitter::constructor_template);
       t->InstanceTemplate()->SetInternalFieldCount(1);
       t->SetClassName(String::NewSymbol("Window"));
-
-      inputChar_symbol = NODE_PSYMBOL("inputChar");
 
       /* Panel-specific methods */
       // TODO: color_set?, overlay, overwrite
@@ -427,6 +423,8 @@ class Window : public EventEmitter {
       NODE_SET_METHOD(target, "colorBg", Colorbg);
       NODE_SET_METHOD(target, "dup2", Dup2);
       NODE_SET_METHOD(target, "dup", Dup);
+
+      emit_symbol = NODE_PSYMBOL("emit");
 
       target->Set(String::NewSymbol("Window"), t->GetFunction());      
     }
@@ -666,6 +664,7 @@ class Window : public EventEmitter {
       win->Wrap(args.This());
       //if (doRef)
         win->Ref();
+      
       return args.This();
     }
 
@@ -2064,13 +2063,13 @@ class Window : public EventEmitter {
       return scope.Close(Integer::New(wincounter));
     }
 
-    Window() : EventEmitter() {
+    Window() : ObjectWrap() {
       panel_ = NULL;
       this->init();
       assert(panel_ != NULL);
     }
     
-    Window(int nlines, int ncols, int begin_y, int begin_x) : EventEmitter() {
+    Window(int nlines, int ncols, int begin_y, int begin_x) : ObjectWrap() {
       panel_ = NULL;
       this->init(nlines, ncols, begin_y, begin_x);
       assert(panel_ != NULL);
@@ -2086,6 +2085,7 @@ class Window : public EventEmitter {
     
   private:
     void Event (int revents) {
+      HandleScope scope;
       if (revents & EV_ERROR)
         return;
 
@@ -2101,10 +2101,14 @@ class Window : public EventEmitter {
             return;
           }
           tmp[0] = chr;
-          Local<Value> vChr[2];
-          vChr[0] = String::New(tmp);
-          vChr[1] = Integer::New(chr);
-          topmost_panel->getWindow()->Emit(inputChar_symbol, 2, vChr);
+          Local<Value> vChr[3];
+          vChr[0] = String::New("inputChar");
+          vChr[1] = String::New(tmp);
+          vChr[2] = Integer::New(chr);
+          Local<Value> emit_v = handle_->Get(emit_symbol);
+          if (!emit_v->IsFunction()) return;
+          Local<Function> emit = Local<Function>::Cast(emit_v);
+          emit->Call(handle_, 3, vChr);
         }
       }
     }
@@ -2116,6 +2120,7 @@ class Window : public EventEmitter {
     }
     
     MyPanel *panel_;
+    
 };
 
 extern "C" void

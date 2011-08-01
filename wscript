@@ -14,7 +14,7 @@ def set_options(opt):
 def configure(conf):
   conf.check_tool('compiler_cxx')
   conf.check_tool('node_addon')
-  
+
   # ugly hack to append -fPIC for x64
   hack = ""
   if (conf.env['DEST_CPU'] == 'x86_64'):
@@ -35,7 +35,7 @@ def build(bld):
     conf.fatal("Building ncurses failed.")
   else:
     obj = bld.new_task_gen('cxx', 'shlib', 'node_addon')
-    obj.target = 'ncurses'
+    obj.target = 'ncurses_addon'
     obj.source = 'ncurses.cc'
     obj.includes = [ncursesdir + '/include', ncursesdir + '/c++']
     obj.cxxflags = ['-O2']
@@ -45,7 +45,7 @@ def shutdown():
   # HACK to get ncurses.node out of build directory.
   # better way to do this?
   if Options.commands['clean']:
-    if exists('ncurses.node'): unlink('ncurses.node')
+    if exists('ncurses_addon.node'): unlink('ncurses_addon.node')
   else:
-    if exists('build/default/ncurses.node') and not exists('ncurses.node'):
-      symlink('build/default/ncurses.node', 'ncurses.node')
+    if exists('build/default/ncurses_addon.node') and not exists('ncurses_addon.node'):
+      symlink('build/default/ncurses_addon.node', 'ncurses_addon.node')
