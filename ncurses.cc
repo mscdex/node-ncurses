@@ -1455,7 +1455,7 @@ class Window : public ObjectWrap {
         String::Utf8Value str(args[0]->ToString());
         ret = win->panel()->printw("%s", ToCString(str));
       } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString()) { 
-        String::Utf8Value str(args[0]->ToString());
+        String::Utf8Value str(args[2]->ToString());
         ret = win->panel()->printw(args[0]->Int32Value(), args[1]->Int32Value(), "%s", ToCString(str));
       } else {
         return ThrowException(Exception::Error(
