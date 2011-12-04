@@ -98,7 +98,7 @@ class MyPanel : public NCursesPanel {
             ((panel_node*)(cur->next))->window = this->assocwin;
             break;
           }
-        }Keys->Set(String::New("UP"), Uint32::NewFromUnsigned(KEY_UP));
+        }
       } else {
         head_panel = new panel_node;
         head_panel->prev = NULL;
@@ -2105,10 +2105,10 @@ class Window : public ObjectWrap {
           vChr[0] = String::New("inputChar");
           vChr[1] = String::New(tmp);
           vChr[2] = Integer::New(chr);
-          Local<Value> emit_v = handle_->Get(emit_symbol);
+          Local<Value> emit_v = topmost_panel->getWindow()->handle_->Get(emit_symbol);
           if (!emit_v->IsFunction()) return;
           Local<Function> emit = Local<Function>::Cast(emit_v);
-          emit->Call(handle_, 3, vChr);
+          emit->Call(topmost_panel->getWindow()->handle_, 3, vChr);
         }
       }
     }
