@@ -47,5 +47,5 @@ def shutdown():
   if Options.commands['clean']:
     if exists('ncurses_addon.node'): unlink('ncurses_addon.node')
   else:
-    if exists('build/default/ncurses_addon.node') and not exists('ncurses_addon.node'):
-      symlink('build/default/ncurses_addon.node', 'ncurses_addon.node')
+    if exists('build/Release/ncurses_addon.node') and not exists('ncurses_addon.node'):
+      symlink('build/Release/ncurses_addon.node', 'ncurses_addon.node')
