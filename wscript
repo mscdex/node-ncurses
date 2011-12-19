@@ -42,10 +42,12 @@ def build(bld):
     obj.linkflags = [ncursesdir + '/lib/libncurses++w.a', ncursesdir + '/lib/libpanelw.a', ncursesdir + '/lib/libncursesw.a']
 
 def shutdown():
-  # HACK to get ncurses.node out of build directory.
+  # HACK to get ncurses_addon.node out of build directory.
   # better way to do this?
   if Options.commands['clean']:
     if exists('ncurses_addon.node'): unlink('ncurses_addon.node')
   else:
     if exists('build/Release/ncurses_addon.node') and not exists('ncurses_addon.node'):
       symlink('build/Release/ncurses_addon.node', 'ncurses_addon.node')
+    if exists('build/default/ncurses_addon.node') and not exists('ncurses_addon.node'):
+      symlink('build/default/ncurses_addon.node', 'ncurses_addon.node')
