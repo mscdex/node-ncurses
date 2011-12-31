@@ -300,6 +300,9 @@ class MyPanel : public NCursesPanel {
     static void doUpdate() {
       ::doupdate();
     }
+    static bool hasMouse() {
+      return (::has_key(KEY_MOUSE) || ::has_mouse() ? TRUE : FALSE);
+    }
 };
 
 bool MyPanel::echoInput_ = false;
@@ -1849,13 +1852,11 @@ class Window : public ObjectWrap {
     }
 
     static Handle<Value> HasmouseStateGetter (Local<String> property, const AccessorInfo& info) {
-      Window *win = ObjectWrap::Unwrap<Window>(info.This());
-      assert(win);
       assert(property == HASMOUSE_STATE_SYMBOL);
 
       HandleScope scope;
 
-      return scope.Close(Integer::New(win->panel()->has_mouse()));
+      return scope.Close(Boolean::New(MyPanel::hasMouse()));
     }
 
     static Handle<Value> HiddenStateGetter (Local<String> property, const AccessorInfo& info) {
