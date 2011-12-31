@@ -1,5 +1,5 @@
 { "name": "ncurses",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "author": "Brian White <mscdex@mscdex.net>",
   "description": "An ncurses binding for node.js",
   "scripts": { "preinstall": "node-waf configure build" },
