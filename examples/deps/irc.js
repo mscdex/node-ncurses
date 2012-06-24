@@ -19,7 +19,7 @@
 
 exports.Client = Client;
 
-var sys = require('sys');
+var util = require('util');
 var net = require('net');
 
 const replyFor = { // {{{
@@ -649,18 +649,18 @@ function Client(server, nick, opt) {
         }
 
         if (self.opt.debug)
-          sys.log("QUIT: " + message.prefix + " " + message.args.join(" "));
+          util.log("QUIT: " + message.prefix + " " + message.args.join(" "));
       break;
       case "NOTICE":
         var from = message.nick, to = message.args[0], text = message.args[1];
         self.emit('notice', from, to, text);
 
         if (self.opt.debug && to == self.nick)
-          sys.log('NOTICE from ' + (from ? from : '(server)') + ': ' + text);
+          util.log('NOTICE from ' + (from ? from : '(server)') + ': ' + text);
       break;
       case "MODE":
         if (self.opt.debug)
-          sys.log("MODE:" + message.args[0] + " sets mode: " + message.args[1]);
+          util.log("MODE:" + message.args[0] + " sets mode: " + message.args[1]);
         if (message.args.length >= 3) {
           var channel = self.chans[message.args[0]],
               nicklist_offset = 2,
@@ -814,17 +814,17 @@ function Client(server, nick, opt) {
           self.emit('pm', from, text);
 
         if (self.opt.debug && to == self.nick)
-          sys.log('GOT MESSAGE from ' + from + ': ' + text);
+          util.log('GOT MESSAGE from ' + from + ': ' + text);
       break;
       default:
         if (message.commandType == 'error') {
           self.emit('error', message);
           if (self.opt.showErrors)
-            sys.log("\033[01;31mERROR: " + sys.inspect(message) + "\033[0m");
+            util.log("\033[01;31mERROR: " + util.inspect(message) + "\033[0m");
         } else {
           self.emit('unhandledMessage', message);
           if (self.opt.debug)
-            sys.log("\033[01;31mUnhandled message: " + sys.inspect(message) + "\033[0m");
+            util.log("\033[01;31mUnhandled message: " + util.inspect(message) + "\033[0m");
         }
     }
   }); // }}}
@@ -842,7 +842,7 @@ function Client(server, nick, opt) {
   process.EventEmitter.call(this);
 }
 
-sys.inherits(Client, process.EventEmitter);
+util.inherits(Client, process.EventEmitter);
 
 Client.prototype.conn = null;
 Client.prototype.chans = {};
@@ -863,7 +863,7 @@ Client.prototype.connect = function (retryCount) { // {{{
       self.conn.on("secure", function(){
         if(!self.conn.verifyPeer()) {
           if (self.opt.debug) {
-            sys.log('Warning: failed to verify SSL peer certificate'+
+            util.log('Warning: failed to verify SSL peer certificate'+
                     ' -- aborting connection');
           }
           this.end();
@@ -896,16 +896,16 @@ Client.prototype.connect = function (retryCount) { // {{{
     if (self.conn.requestedDisconnect)
       return;
     if (self.opt.debug)
-      sys.log('Disconnected: reconnecting');
+      util.log('Disconnected: reconnecting');
     if (self.opt.retryCount !== null && retryCount >= self.opt.retryCount) {
       if (self.opt.debug)
-        sys.log('Maximum retry count (' + self.opt.retryCount + ') reached. Aborting');
+        util.log('Maximum retry count (' + self.opt.retryCount + ') reached. Aborting');
       self.emit('abort', self.opt.retryCount);
       return;
     }
 
     if (self.opt.debug)
-      sys.log('Waiting ' + self.opt.retryDelay + 'ms before retrying');
+      util.log('Waiting ' + self.opt.retryDelay + 'ms before retrying');
     setTimeout(function() {
       self.connect(retryCount + 1);
     }, self.opt.retryDelay);
@@ -932,7 +932,7 @@ Client.prototype.send = function(command) { // {{{
   args.shift();
 
   if (this.opt.debug)
-    sys.log('SEND: ' + command + " " + args.join(" "));
+    util.log('SEND: ' + command + " " + args.join(" "));
 
   this.conn.write(command + (args.length ? " " + args.join(" ") : "") + "\r\n");
 }; // }}}
