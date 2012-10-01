@@ -14,15 +14,6 @@
       'cflags_cc+': [ '-O3' ],
       'cflags_c!': [ '-O2' ],
       'cflags_c+': [ '-O3' ],
-      'libraries': [
-        '-lncursesw',
-        '-lncurses++w',
-      ],
-      #'conditions': [
-      #  ['target_arch=="x64"', {
-      #    'cflags+': [ '-fPIC' ]
-      #  }],
-      #],
     },
   ],
 }

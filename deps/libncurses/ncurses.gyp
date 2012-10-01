@@ -12,6 +12,15 @@
         'panel',
         'ncurses',
       ],
+      'all_dependent_settings': {
+        'include_dirs': [
+          '.',
+          'include',
+          'c++',
+          'panel',
+          'ncurses',
+        ],
+      },
       'sources': [
         # ncursesw
         'ncurses/codes.c',
@@ -214,8 +223,6 @@
         'panel/p_win.c',
 
         # c++ interface
-        'c++/cursesf.cc',
-        'c++/cursesm.cc',
         'c++/cursesp.cc',
         'c++/cursesw.cc',
         'c++/cursespad.cc',
