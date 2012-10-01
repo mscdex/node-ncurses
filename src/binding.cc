@@ -692,11 +692,15 @@ class Window : public ObjectWrap {
         win = new Window();
       else if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
         win = new Window(args[0]->Int32Value(), args[1]->Int32Value(), 0, 0);
-      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsInt32())
-        win = new Window(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Int32Value(), 0);
-      else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsInt32() && args[3]->IsInt32())
-        win = new Window(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Int32Value(), args[3]->Int32Value());
-      else {
+      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
+               && args[2]->IsInt32()) {
+        win = new Window(args[0]->Int32Value(), args[1]->Int32Value(),
+                         args[2]->Int32Value(), 0);
+      } else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32()
+                 && args[2]->IsInt32() && args[3]->IsInt32()) {
+        win = new Window(args[0]->Int32Value(), args[1]->Int32Value(),
+                         args[2]->Int32Value(), args[3]->Int32Value());
+      } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
         ));
@@ -811,7 +815,8 @@ class Window : public ObjectWrap {
       } else if (args.Length() == 1 && args[0]->IsString()) {
         String::Utf8Value str(args[0]->ToString());
         win->panel()->frame(ToCString(str), NULL);
-      } else if (args.Length() == 2 && args[0]->IsString() && args[1]->IsString()) {
+      } else if (args.Length() == 2 && args[0]->IsString()
+                 && args[1]->IsString()) {
         String::Utf8Value str0(args[0]->ToString());
         String::Utf8Value str1(args[1]->ToString());
         win->panel()->frame(ToCString(str0), ToCString(str1));
@@ -833,7 +838,8 @@ class Window : public ObjectWrap {
       } else if (args.Length() == 1 && args[0]->IsString()) {
         String::Utf8Value str(args[0]->ToString());
         win->panel()->boldframe(ToCString(str), NULL);
-      } else if (args.Length() == 2 && args[0]->IsString() && args[1]->IsString()) {
+      } else if (args.Length() == 2 && args[0]->IsString()
+                 && args[1]->IsString()) {
         String::Utf8Value str0(args[0]->ToString());
         String::Utf8Value str1(args[1]->ToString());
         win->panel()->boldframe(ToCString(str0), ToCString(str1));
@@ -853,7 +859,8 @@ class Window : public ObjectWrap {
       if (args.Length() == 1 && args[0]->IsString()) {
         String::Utf8Value str(args[0]->ToString());
         win->panel()->label(ToCString(str), NULL);
-      } else if (args.Length() == 2 && args[0]->IsString() && args[1]->IsString()) {
+      } else if (args.Length() == 2 && args[0]->IsString()
+                 && args[1]->IsString()) {
         String::Utf8Value str0(args[0]->ToString());
         String::Utf8Value str1(args[1]->ToString());
         win->panel()->label(ToCString(str0), ToCString(str1));
@@ -905,9 +912,11 @@ class Window : public ObjectWrap {
       int ret;
       if (args.Length() == 1 && args[0]->IsUint32())
         ret = win->panel()->addch(args[0]->Uint32Value());
-      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsUint32())
-        ret = win->panel()->addch(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Uint32Value());
-      else {
+      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
+               && args[2]->IsUint32()) {
+        ret = win->panel()->addch(args[0]->Int32Value(), args[1]->Int32Value(),
+                                  args[2]->Uint32Value());
+      } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
         ));
@@ -940,15 +949,20 @@ class Window : public ObjectWrap {
       if (args.Length() == 1 && args[0]->IsString()) {
         String::Utf8Value str(args[0]->ToString());
         ret = win->panel()->addstr(ToCString(str), -1);
-      } else if (args.Length() == 2 && args[0]->IsString() && args[1]->IsInt32()) {
+      } else if (args.Length() == 2 && args[0]->IsString()
+                 && args[1]->IsInt32()) {
         String::Utf8Value str(args[0]->ToString());
         ret = win->panel()->addstr(ToCString(str), args[1]->Int32Value());
-      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString()) {
+      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
+                 && args[2]->IsString()) {
         String::Utf8Value str(args[2]->ToString());
-        ret = win->panel()->addstr(args[0]->Int32Value(), args[1]->Int32Value(), ToCString(str), -1);
-      } else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString() && args[3]->IsInt32()) {
+        ret = win->panel()->addstr(args[0]->Int32Value(), args[1]->Int32Value(),
+                                   ToCString(str), -1);
+      } else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32()
+                 && args[2]->IsString() && args[3]->IsInt32()) {
         String::Utf8Value str(args[2]->ToString());
-        ret = win->panel()->addstr(args[0]->Int32Value(), args[1]->Int32Value(), ToCString(str), args[3]->Int32Value());
+        ret = win->panel()->addstr(args[0]->Int32Value(), args[1]->Int32Value(),
+                                   ToCString(str), args[3]->Int32Value());
       } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
@@ -958,7 +972,8 @@ class Window : public ObjectWrap {
       return scope.Close(Integer::New(ret));
     }
 
-    // FIXME: addchstr requires a pointer to a chtype not an actual value, unlike the other ACS_*-using methods
+    // FIXME: addchstr requires a pointer to a chtype not an actual value,
+    //        unlike the other ACS_*-using methods
     /*static Handle<Value> Addchstr (const Arguments& args) {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
@@ -966,13 +981,19 @@ class Window : public ObjectWrap {
       int ret;
       if (args.Length() == 1 && args[0]->IsUint32())
         ret = win->panel()->addchstr(args[0]->Uint32Value(), -1);
-      else if (args.Length() == 2 && args[0]->IsUint32() && args[1]->IsInt32())
-        ret = win->panel()->addchstr(args[0]->Uint32Value(), args[1]->Int32Value());
-      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsUint32())
-        ret = win->panel()->addchstr(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Uint32Value(), -1);
-      else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsUint32() && args[3]->IsInt32())
-        ret = win->panel()->addchstr(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Uint32Value(), args[3]->Int32Value());
-      else {
+      else if (args.Length() == 2 && args[0]->IsUint32() && args[1]->IsInt32()) {
+        ret = win->panel()->addchstr(args[0]->Uint32Value(),
+                                     args[1]->Int32Value());
+      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
+                 && args[2]->IsUint32()) {
+        ret = win->panel()->addchstr(args[0]->Int32Value(), args[1]->Int32Value(),
+                                     args[2]->Uint32Value(), -1);
+      } else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32()
+                 && args[2]->IsUint32() && args[3]->IsInt32()) {
+        ret = win->panel()->addchstr(args[0]->Int32Value(), args[1]->Int32Value(),
+                                     args[2]->Uint32Value(),
+                                     args[3]->Int32Value());
+      } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
         ));
@@ -1007,13 +1028,19 @@ class Window : public ObjectWrap {
       int ret;
       if (args.Length() == 1 && args[0]->IsUint32())
         ret = win->panel()->inchstr(args[0]->Uint32Value(), -1);
-      else if (args.Length() == 2 && args[0]->IsUint32() && args[1]->IsInt32())
-        ret = win->panel()->inchstr(args[0]->Uint32Value(), args[1]->Int32Value());
-      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsUint32())
-        ret = win->panel()->inchstr(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Uint32Value(), -1);
-      else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsUint32() && args[3]->IsInt32())
-        ret = win->panel()->inchstr(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Uint32Value(), args[3]->Int32Value());
-      else {
+      else if (args.Length() == 2 && args[0]->IsUint32() && args[1]->IsInt32()) {
+        ret = win->panel()->inchstr(args[0]->Uint32Value(),
+                                    args[1]->Int32Value());
+      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
+                 && args[2]->IsUint32()) {
+        ret = win->panel()->inchstr(args[0]->Int32Value(), args[1]->Int32Value(),
+                                    args[2]->Uint32Value(), -1);
+      } else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32()
+                 && args[2]->IsUint32() && args[3]->IsInt32()) {
+        ret = win->panel()->inchstr(args[0]->Int32Value(), args[1]->Int32Value(),
+                                    args[2]->Uint32Value(),
+                                    args[3]->Int32Value());
+      } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
         ));
@@ -1029,9 +1056,11 @@ class Window : public ObjectWrap {
       int ret;
       if (args.Length() == 1 && args[0]->IsUint32())
         ret = win->panel()->insch(args[0]->Uint32Value());
-      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsUint32())
-        ret = win->panel()->insch(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Uint32Value());
-      else {
+      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
+               && args[2]->IsUint32()) {
+        ret = win->panel()->insch(args[0]->Int32Value(), args[1]->Int32Value(),
+                                  args[2]->Uint32Value());
+      } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
         ));
@@ -1045,15 +1074,28 @@ class Window : public ObjectWrap {
       HandleScope scope;
 
       int ret;
-      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsUint32())
-        ret = win->panel()->chgat(args[0]->Int32Value(), args[1]->Uint32Value(), win->panel()->getcolor());
-      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsUint32() && args[2]->IsUint32())
-        ret = win->panel()->chgat(args[0]->Int32Value(), (attr_t)(args[1]->Uint32Value()), args[2]->Uint32Value());
-      else if (args.Length() == 4 && args[0]->IsUint32() && args[1]->IsUint32() && args[2]->IsInt32() && args[3]->IsUint32())
-        ret = win->panel()->chgat(args[0]->Uint32Value(), args[1]->Uint32Value(), args[2]->Int32Value(), args[3]->Uint32Value(), win->panel()->getcolor());
-      else if (args.Length() == 5 && args[0]->IsUint32() && args[1]->IsUint32() && args[2]->IsInt32() && args[3]->IsUint32() && args[4]->IsUint32())
-        ret = win->panel()->chgat(args[0]->Uint32Value(), args[1]->Uint32Value(), args[2]->Int32Value(), args[3]->Uint32Value(), args[4]->Uint32Value());
-      else {
+      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsUint32()) {
+        ret = win->panel()->chgat(args[0]->Int32Value(), args[1]->Uint32Value(),
+                                  win->panel()->getcolor());
+      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsUint32()
+                 && args[2]->IsUint32()) {
+        ret = win->panel()->chgat(args[0]->Int32Value(),
+                                  (attr_t)(args[1]->Uint32Value()),
+                                  args[2]->Uint32Value());
+      } else if (args.Length() == 4 && args[0]->IsUint32() && args[1]->IsUint32()
+                 && args[2]->IsInt32() && args[3]->IsUint32()) {
+        ret = win->panel()->chgat(args[0]->Uint32Value(), args[1]->Uint32Value(),
+                                  args[2]->Int32Value(),
+                                  (attr_t)(args[3]->Uint32Value()),
+                                  win->panel()->getcolor());
+      } else if (args.Length() == 5 && args[0]->IsUint32() && args[1]->IsUint32()
+                 && args[2]->IsInt32() && args[3]->IsUint32()
+                 && args[4]->IsUint32()) {
+        ret = win->panel()->chgat(args[0]->Uint32Value(), args[1]->Uint32Value(),
+                                  args[2]->Int32Value(),
+                                  (attr_t)(args[3]->Uint32Value()),
+                                  args[4]->Uint32Value());
+      } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
         ));
@@ -1097,15 +1139,20 @@ class Window : public ObjectWrap {
       if (args.Length() == 1 && args[0]->IsString()) {
         String::Utf8Value str(args[0]->ToString());
         ret = win->panel()->insstr(ToCString(str), -1);
-      } else if (args.Length() == 2 && args[0]->IsString() && args[1]->IsInt32()) {
+      } else if (args.Length() == 2 && args[0]->IsString()
+                 && args[1]->IsInt32()) {
         String::Utf8Value str(args[0]->ToString());
         ret = win->panel()->insstr(ToCString(str), args[1]->Int32Value());
-      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString()) {
+      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
+                 && args[2]->IsString()) {
         String::Utf8Value str(args[2]->ToString());
-        ret = win->panel()->insstr(args[0]->Int32Value(), args[1]->Int32Value(), ToCString(str), -1);
-      } else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString() && args[3]->IsInt32()) {
+        ret = win->panel()->insstr(args[0]->Int32Value(), args[1]->Int32Value(),
+                                   ToCString(str), -1);
+      } else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32()
+                 && args[2]->IsString() && args[3]->IsInt32()) {
         String::Utf8Value str(args[2]->ToString());
-        ret = win->panel()->insstr(args[0]->Int32Value(), args[1]->Int32Value(), ToCString(str), args[3]->Int32Value());
+        ret = win->panel()->insstr(args[0]->Int32Value(), args[1]->Int32Value(),
+                                   ToCString(str), args[3]->Int32Value());
       } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
@@ -1201,21 +1248,49 @@ class Window : public ObjectWrap {
         ret = win->panel()->border(0);
       else if (args.Length() == 1 && args[0]->IsUint32())
         ret = win->panel()->border(args[0]->Uint32Value(), 0);
-      else if (args.Length() == 2 && args[0]->IsUint32() && args[1]->IsUint32())
-        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(), 0);
-      else if (args.Length() == 3 && args[0]->IsUint32() && args[1]->IsUint32() && args[2]->IsUint32())
-        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(), args[2]->Uint32Value(), 0);
-      else if (args.Length() == 4 && args[0]->IsUint32() && args[1]->IsUint32() && args[2]->IsUint32() && args[3]->IsUint32())
-        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(), args[2]->Uint32Value(), args[3]->Uint32Value(), 0);
-      else if (args.Length() == 5 && args[0]->IsUint32() && args[1]->IsUint32() && args[2]->IsUint32() && args[3]->IsUint32() && args[4]->IsUint32())
-        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(), args[2]->Uint32Value(), args[3]->Uint32Value(), args[4]->Uint32Value(), 0);
-      else if (args.Length() == 6 && args[0]->IsUint32() && args[1]->IsUint32() && args[2]->IsUint32() && args[3]->IsUint32() && args[4]->IsUint32() && args[5]->IsUint32())
-        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(), args[2]->Uint32Value(), args[3]->Uint32Value(), args[4]->Uint32Value(), args[5]->Uint32Value(), 0);
-      else if (args.Length() == 7 && args[0]->IsUint32() && args[1]->IsUint32() && args[2]->IsUint32() && args[3]->IsUint32() && args[4]->IsUint32() && args[5]->IsUint32() && args[6]->IsUint32())
-        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(), args[2]->Uint32Value(), args[3]->Uint32Value(), args[4]->Uint32Value(), args[5]->Uint32Value(), args[6]->Uint32Value(), 0);
-      else if (args.Length() == 8 && args[0]->IsUint32() && args[1]->IsUint32() && args[2]->IsUint32() && args[3]->IsUint32() && args[4]->IsUint32() && args[5]->IsUint32() && args[6]->IsUint32() && args[7]->IsUint32())
-        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(), args[2]->Uint32Value(), args[3]->Uint32Value(), args[4]->Uint32Value(), args[5]->Uint32Value(), args[6]->Uint32Value(), args[7]->Uint32Value());
-      else {
+      else if (args.Length() == 2 && args[0]->IsUint32()
+               && args[1]->IsUint32()) {
+        ret = win->panel()->border(args[0]->Uint32Value(),
+                                   args[1]->Uint32Value(), 0);
+      } else if (args.Length() == 3 && args[0]->IsUint32() && args[1]->IsUint32()
+                 && args[2]->IsUint32()) {
+        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(),
+                                   args[2]->Uint32Value(), 0);
+      } else if (args.Length() == 4 && args[0]->IsUint32() && args[1]->IsUint32()
+                 && args[2]->IsUint32() && args[3]->IsUint32()) {
+        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(),
+                                   args[2]->Uint32Value(),
+                                   args[3]->Uint32Value(), 0);
+      } else if (args.Length() == 5 && args[0]->IsUint32() && args[1]->IsUint32()
+                 && args[2]->IsUint32() && args[3]->IsUint32()
+                 && args[4]->IsUint32()) {
+        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(),
+                                   args[2]->Uint32Value(), args[3]->Uint32Value(),
+                                   args[4]->Uint32Value(), 0);
+      } else if (args.Length() == 6 && args[0]->IsUint32() && args[1]->IsUint32()
+                 && args[2]->IsUint32() && args[3]->IsUint32()
+                 && args[4]->IsUint32() && args[5]->IsUint32()) {
+        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(),
+                                   args[2]->Uint32Value(), args[3]->Uint32Value(),
+                                   args[4]->Uint32Value(),
+                                   args[5]->Uint32Value(), 0);
+      } else if (args.Length() == 7 && args[0]->IsUint32() && args[1]->IsUint32()
+                 && args[2]->IsUint32() && args[3]->IsUint32()
+                 && args[4]->IsUint32() && args[5]->IsUint32()
+                 && args[6]->IsUint32()) {
+        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(),
+                                   args[2]->Uint32Value(), args[3]->Uint32Value(),
+                                   args[4]->Uint32Value(), args[5]->Uint32Value(),
+                                   args[6]->Uint32Value(), 0);
+      } else if (args.Length() == 8 && args[0]->IsUint32() && args[1]->IsUint32()
+                 && args[2]->IsUint32() && args[3]->IsUint32()
+                 && args[4]->IsUint32() && args[5]->IsUint32()
+                 && args[6]->IsUint32() && args[7]->IsUint32()) {
+        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(),
+                                   args[2]->Uint32Value(), args[3]->Uint32Value(),
+                                   args[4]->Uint32Value(), args[5]->Uint32Value(),
+                                   args[6]->Uint32Value(), args[7]->Uint32Value());
+      } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
         ));
@@ -1233,11 +1308,15 @@ class Window : public ObjectWrap {
         ret = win->panel()->hline(args[0]->Int32Value(), 0);
       else if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsUint32())
         ret = win->panel()->hline(args[0]->Int32Value(), args[1]->Uint32Value());
-      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsInt32())
-        ret = win->panel()->hline(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Int32Value(), 0);
-      else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsInt32() && args[3]->IsUint32())
-        ret = win->panel()->hline(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Int32Value(), args[3]->Uint32Value());
-      else {
+      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
+               && args[2]->IsInt32()) {
+        ret = win->panel()->hline(args[0]->Int32Value(), args[1]->Int32Value(),
+                                  args[2]->Int32Value(), 0);
+      } else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32()
+                 && args[2]->IsInt32() && args[3]->IsUint32()) {
+        ret = win->panel()->hline(args[0]->Int32Value(), args[1]->Int32Value(),
+                                  args[2]->Int32Value(), args[3]->Uint32Value());
+      } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
         ));
@@ -1255,11 +1334,15 @@ class Window : public ObjectWrap {
         ret = win->panel()->vline(args[0]->Int32Value(), 0);
       else if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsUint32())
         ret = win->panel()->vline(args[0]->Int32Value(), args[1]->Uint32Value());
-      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsInt32())
-        ret = win->panel()->vline(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Int32Value(), 0);
-      else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsInt32() && args[3]->IsUint32())
-        ret = win->panel()->vline(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Int32Value(), args[3]->Uint32Value());
-      else {
+      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
+               && args[2]->IsInt32()) {
+        ret = win->panel()->vline(args[0]->Int32Value(), args[1]->Int32Value(),
+                                  args[2]->Int32Value(), 0);
+      } else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32()
+                 && args[2]->IsInt32() && args[3]->IsUint32()) {
+        ret = win->panel()->vline(args[0]->Int32Value(), args[1]->Int32Value(),
+                                  args[2]->Int32Value(), args[3]->Uint32Value());
+      } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
         ));
@@ -1354,9 +1437,10 @@ class Window : public ObjectWrap {
       HandleScope scope;
 
       int ret;
-      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
-        ret = win->panel()->setscrreg(args[0]->Int32Value(), args[1]->Int32Value());
-      else {
+      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32()) {
+        ret = win->panel()->setscrreg(args[0]->Int32Value(),
+                                      args[1]->Int32Value());
+      } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
         ));
@@ -1370,9 +1454,10 @@ class Window : public ObjectWrap {
       HandleScope scope;
 
       int ret;
-      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
-        ret = win->panel()->touchline(args[0]->Int32Value(), args[1]->Int32Value());
-      else {
+      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32()) {
+        ret = win->panel()->touchline(args[0]->Int32Value(),
+                                      args[1]->Int32Value());
+      } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
         ));
@@ -1404,11 +1489,14 @@ class Window : public ObjectWrap {
       HandleScope scope;
 
       int ret;
-      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
-        ret = win->panel()->touchln(args[0]->Int32Value(), args[1]->Int32Value(), true);
-      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsBoolean())
-        ret = win->panel()->touchln(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->BooleanValue());
-      else {
+      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32()) {
+        ret = win->panel()->touchln(args[0]->Int32Value(),
+                                    args[1]->Int32Value(), true);
+      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
+                 && args[2]->IsBoolean()) {
+        ret = win->panel()->touchln(args[0]->Int32Value(), args[1]->Int32Value(),
+                                    args[2]->BooleanValue());
+      } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
         ));
@@ -1438,9 +1526,10 @@ class Window : public ObjectWrap {
       HandleScope scope;
 
       int ret;
-      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
-        ret = win->panel()->redrawln(args[0]->Int32Value(), args[1]->Int32Value());
-      else {
+      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32()) {
+        ret = win->panel()->redrawln(args[0]->Int32Value(),
+                                     args[1]->Int32Value());
+      } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
         ));
@@ -1481,9 +1570,10 @@ class Window : public ObjectWrap {
       HandleScope scope;
 
       int ret;
-      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
-        ret = win->panel()->wresize(args[0]->Int32Value(), args[1]->Int32Value());
-      else {
+      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32()) {
+        ret = win->panel()->wresize(args[0]->Int32Value(),
+                                    args[1]->Int32Value());
+      } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
         ));
@@ -1500,9 +1590,11 @@ class Window : public ObjectWrap {
       if (args.Length() == 1 && args[0]->IsString()) {
         String::Utf8Value str(args[0]->ToString());
         ret = win->panel()->printw("%s", ToCString(str));
-      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString()) {
+      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
+                 && args[2]->IsString()) {
         String::Utf8Value str(args[2]->ToString());
-        ret = win->panel()->printw(args[0]->Int32Value(), args[1]->Int32Value(), "%s", ToCString(str));
+        ret = win->panel()->printw(args[0]->Int32Value(), args[1]->Int32Value(),
+                                   "%s", ToCString(str));
       } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
@@ -1729,9 +1821,11 @@ class Window : public ObjectWrap {
       int ret;
       if (args.Length() == 1 && args[0]->IsInt32())
         ret = MyPanel::pair(args[0]->Int32Value());
-      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsInt32())
-        ret = MyPanel::pair(args[0]->Int32Value(), (short)args[1]->Int32Value(), (short)args[2]->Int32Value());
-      else {
+      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
+               && args[2]->IsInt32()) {
+        ret = MyPanel::pair(args[0]->Int32Value(), (short)args[1]->Int32Value(),
+                            (short)args[2]->Int32Value());
+      } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
         ));
@@ -1805,14 +1899,24 @@ class Window : public ObjectWrap {
       HandleScope scope;
       int ret;
       if (args.Length() == 7 && args[1]->IsUint32() && args[2]->IsUint32()
-          && args[3]->IsUint32() && args[4]->IsUint32() && args[5]->IsUint32() && args[6]->IsUint32())
-        ret = win->panel()->copywin(*(ObjectWrap::Unwrap<Window>(args[0]->ToObject())->panel()), args[1]->Uint32Value(), args[2]->Uint32Value(), args[3]->Uint32Value(), args[4]->Uint32Value(), args[5]->Uint32Value(), args[6]->Uint32Value());
-
-      else if (args.Length() == 8 && args[1]->IsUint32() && args[2]->IsUint32()
-          && args[3]->IsUint32() && args[4]->IsUint32() && args[5]->IsUint32() && args[6]->IsUint32()
-          && args[7]->IsBoolean())
-        ret = win->panel()->copywin(*(ObjectWrap::Unwrap<Window>(args[0]->ToObject())->panel()), args[1]->Uint32Value(), args[2]->Uint32Value(), args[3]->Uint32Value(), args[4]->Uint32Value(), args[5]->Uint32Value(), args[6]->Uint32Value(), args[7]->BooleanValue());
-      else {
+          && args[3]->IsUint32() && args[4]->IsUint32() && args[5]->IsUint32()
+          && args[6]->IsUint32()) {
+        ret = win->panel()->copywin(
+                    *(ObjectWrap::Unwrap<Window>(args[0]->ToObject())->panel()),
+                    args[1]->Uint32Value(), args[2]->Uint32Value(),
+                    args[3]->Uint32Value(), args[4]->Uint32Value(),
+                    args[5]->Uint32Value(), args[6]->Uint32Value());
+      } else if (args.Length() == 8 && args[1]->IsUint32()
+                 && args[2]->IsUint32() && args[3]->IsUint32()
+                 && args[4]->IsUint32() && args[5]->IsUint32()
+                 && args[6]->IsUint32() && args[7]->IsBoolean()) {
+        ret = win->panel()->copywin(
+                    *(ObjectWrap::Unwrap<Window>(args[0]->ToObject())->panel()),
+                    args[1]->Uint32Value(), args[2]->Uint32Value(),
+                    args[3]->Uint32Value(), args[4]->Uint32Value(),
+                    args[5]->Uint32Value(), args[6]->Uint32Value(),
+                    args[7]->BooleanValue());
+      } else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
         ));
@@ -2102,31 +2206,36 @@ class Window : public ObjectWrap {
       MyPanel::raw(value->BooleanValue());
     }
 
-    static Handle<Value> ACSConstsGetter (Local<String> property, const AccessorInfo& info) {
+    static Handle<Value> ACSConstsGetter (Local<String> property,
+                                          const AccessorInfo& info) {
       HandleScope scope;
 
       return scope.Close(ACS_Chars);
     }
 
-    static Handle<Value> KeyConstsGetter (Local<String> property, const AccessorInfo& info) {
+    static Handle<Value> KeyConstsGetter (Local<String> property,
+                                          const AccessorInfo& info) {
       HandleScope scope;
 
       return scope.Close(Keys);
     }
 
-    static Handle<Value> ColorConstsGetter (Local<String> property, const AccessorInfo& info) {
+    static Handle<Value> ColorConstsGetter (Local<String> property,
+                                            const AccessorInfo& info) {
       HandleScope scope;
 
       return scope.Close(Colors);
     }
 
-    static Handle<Value> AttrConstsGetter (Local<String> property, const AccessorInfo& info) {
+    static Handle<Value> AttrConstsGetter (Local<String> property,
+                                           const AccessorInfo& info) {
       HandleScope scope;
 
       return scope.Close(Attrs);
     }
 
-    static Handle<Value> NumwinsGetter (Local<String> property, const AccessorInfo& info) {
+    static Handle<Value> NumwinsGetter (Local<String> property,
+                                        const AccessorInfo& info) {
       HandleScope scope;
 
       return scope.Close(Integer::New(wincounter));
