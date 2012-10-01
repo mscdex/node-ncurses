@@ -43,33 +43,36 @@ static Persistent<FunctionTemplate> window_constructor;
 static Persistent<Function> Emit;
 static Persistent<String> emit_symbol;
 static Persistent<String> inputchar_symbol;
+static Persistent<String> echo_state_symbol;
+static Persistent<String> showcursor_state_symbol;
+static Persistent<String> lines_state_symbol;
+static Persistent<String> cols_state_symbol;
+static Persistent<String> tabsize_state_symbol;
+static Persistent<String> hasmouse_state_symbol;
+static Persistent<String> hascolors_state_symbol;
+static Persistent<String> numcolors_state_symbol;
+static Persistent<String> maxcolorpairs_state_symbol;
+static Persistent<String> raw_state_symbol;
+static Persistent<String> bkgd_state_symbol;
+static Persistent<String> hidden_state_symbol;
+static Persistent<String> height_state_symbol;
+static Persistent<String> width_state_symbol;
+static Persistent<String> begx_state_symbol;
+static Persistent<String> begy_state_symbol;
+static Persistent<String> curx_state_symbol;
+static Persistent<String> cury_state_symbol;
+static Persistent<String> maxx_state_symbol;
+static Persistent<String> maxy_state_symbol;
+static Persistent<String> wintouched_state_symbol;
+static Persistent<String> numwins_symbol;
+static Persistent<String> ACS_symbol;
+static Persistent<String> keys_symbol;
+static Persistent<String> colors_symbol;
+static Persistent<String> attrs_symbol;
 static Persistent<Object> ACS_Chars;
 static Persistent<Object> Keys;
 static Persistent<Object> Attrs;
 static Persistent<Object> Colors;
-
-#define ECHO_STATE_SYMBOL String::NewSymbol("echo")
-#define SHOWCURSOR_STATE_SYMBOL String::NewSymbol("showCursor")
-#define LINES_STATE_SYMBOL String::NewSymbol("lines")
-#define COLS_STATE_SYMBOL String::NewSymbol("cols")
-#define TABSIZE_STATE_SYMBOL String::NewSymbol("tabsize")
-#define HASMOUSE_STATE_SYMBOL String::NewSymbol("hasMouse")
-#define HASCOLORS_STATE_SYMBOL String::NewSymbol("hasColors")
-#define NUMCOLORS_STATE_SYMBOL String::NewSymbol("numColors")
-#define MAXCOLORPAIRS_STATE_SYMBOL String::NewSymbol("maxColorPairs")
-#define RAW_STATE_SYMBOL String::NewSymbol("raw")
-
-#define BKGD_STATE_SYMBOL String::NewSymbol("bkgd")
-#define HIDDEN_STATE_SYMBOL String::NewSymbol("hidden")
-#define HEIGHT_STATE_SYMBOL String::NewSymbol("height")
-#define WIDTH_STATE_SYMBOL String::NewSymbol("width")
-#define BEGX_STATE_SYMBOL String::NewSymbol("begx")
-#define BEGY_STATE_SYMBOL String::NewSymbol("begy")
-#define CURX_STATE_SYMBOL String::NewSymbol("curx")
-#define CURY_STATE_SYMBOL String::NewSymbol("cury")
-#define MAXX_STATE_SYMBOL String::NewSymbol("maxx")
-#define MAXY_STATE_SYMBOL String::NewSymbol("maxy")
-#define WINTOUCHED_STATE_SYMBOL String::NewSymbol("touched")
 
 // Extracts a C string from a V8 Utf8Value.
 const char* ToCString(const v8::String::Utf8Value& value) {
@@ -312,6 +315,35 @@ class Window : public ObjectWrap {
       window_constructor->InstanceTemplate()->SetInternalFieldCount(1);
       window_constructor->SetClassName(name);
 
+      emit_symbol = NODE_PSYMBOL("emit");
+      inputchar_symbol = NODE_PSYMBOL("inputChar");
+      echo_state_symbol = NODE_PSYMBOL("echo");
+      showcursor_state_symbol = NODE_PSYMBOL("showCursor");
+      lines_state_symbol = NODE_PSYMBOL("lines");
+      cols_state_symbol = NODE_PSYMBOL("cols");
+      tabsize_state_symbol = NODE_PSYMBOL("tabsize");
+      hasmouse_state_symbol = NODE_PSYMBOL("hasMouse");
+      hascolors_state_symbol = NODE_PSYMBOL("hasColors");
+      numcolors_state_symbol = NODE_PSYMBOL("numColors");
+      maxcolorpairs_state_symbol = NODE_PSYMBOL("maxColorPairs");
+      raw_state_symbol = NODE_PSYMBOL("raw");
+      bkgd_state_symbol = NODE_PSYMBOL("bkgd");
+      hidden_state_symbol = NODE_PSYMBOL("hidden");
+      height_state_symbol = NODE_PSYMBOL("height");
+      width_state_symbol = NODE_PSYMBOL("width");
+      begx_state_symbol = NODE_PSYMBOL("begx");
+      begy_state_symbol = NODE_PSYMBOL("begy");
+      curx_state_symbol = NODE_PSYMBOL("curx");
+      cury_state_symbol = NODE_PSYMBOL("cury");
+      maxx_state_symbol = NODE_PSYMBOL("maxx");
+      maxy_state_symbol = NODE_PSYMBOL("maxy");
+      wintouched_state_symbol = NODE_PSYMBOL("touched");
+      numwins_symbol = NODE_PSYMBOL("numwins");
+      ACS_symbol = NODE_PSYMBOL("ACS");
+      keys_symbol = NODE_PSYMBOL("keys");
+      colors_symbol = NODE_PSYMBOL("colors");
+      attrs_symbol = NODE_PSYMBOL("attrs");
+
       /* Panel-specific methods */
       // TODO: color_set?, overlay, overwrite
       NODE_SET_PROTOTYPE_METHOD(window_constructor, "clearok", Clearok);
@@ -380,34 +412,47 @@ class Window : public ObjectWrap {
       //NODE_SET_PROTOTYPE_METHOD(window_constructor, "inchstr", Inchstr);
 
       /* Window properties */
-      window_constructor->PrototypeTemplate()->SetAccessor(BKGD_STATE_SYMBOL, BkgdStateGetter, BkgdStateSetter);
-      window_constructor->PrototypeTemplate()->SetAccessor(HIDDEN_STATE_SYMBOL, HiddenStateGetter);
-      window_constructor->PrototypeTemplate()->SetAccessor(HEIGHT_STATE_SYMBOL, HeightStateGetter);
-      window_constructor->PrototypeTemplate()->SetAccessor(WIDTH_STATE_SYMBOL, WidthStateGetter);
-      window_constructor->PrototypeTemplate()->SetAccessor(BEGX_STATE_SYMBOL, BegxStateGetter);
-      window_constructor->PrototypeTemplate()->SetAccessor(BEGY_STATE_SYMBOL, BegyStateGetter);
-      window_constructor->PrototypeTemplate()->SetAccessor(CURX_STATE_SYMBOL, CurxStateGetter);
-      window_constructor->PrototypeTemplate()->SetAccessor(CURY_STATE_SYMBOL, CuryStateGetter);
-      window_constructor->PrototypeTemplate()->SetAccessor(MAXX_STATE_SYMBOL, MaxxStateGetter);
-      window_constructor->PrototypeTemplate()->SetAccessor(MAXY_STATE_SYMBOL, MaxyStateGetter);
-      window_constructor->PrototypeTemplate()->SetAccessor(WINTOUCHED_STATE_SYMBOL, WintouchedStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(bkgd_state_symbol,
+                                                           BkgdStateGetter,
+                                                           BkgdStateSetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(hidden_state_symbol,
+                                                           HiddenStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(height_state_symbol,
+                                                           HeightStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(width_state_symbol,
+                                                           WidthStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(begx_state_symbol,
+                                                           BegxStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(begy_state_symbol,
+                                                           BegyStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(curx_state_symbol,
+                                                           CurxStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(cury_state_symbol,
+                                                           CuryStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(maxx_state_symbol,
+                                                           MaxxStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(maxy_state_symbol,
+                                                           MaxyStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(wintouched_state_symbol,
+                                                           WintouchedStateGetter);
 
       /* Global/Terminal properties and functions */
-      target->SetAccessor(ECHO_STATE_SYMBOL, EchoStateGetter, EchoStateSetter);
-      target->SetAccessor(SHOWCURSOR_STATE_SYMBOL, ShowcursorStateGetter, ShowcursorStateSetter);
-      target->SetAccessor(LINES_STATE_SYMBOL, LinesStateGetter);
-      target->SetAccessor(COLS_STATE_SYMBOL, ColsStateGetter);
-      target->SetAccessor(TABSIZE_STATE_SYMBOL, TabsizeStateGetter);
-      target->SetAccessor(HASMOUSE_STATE_SYMBOL, HasmouseStateGetter);
-      target->SetAccessor(HASCOLORS_STATE_SYMBOL, HascolorsStateGetter);
-      target->SetAccessor(NUMCOLORS_STATE_SYMBOL, NumcolorsStateGetter);
-      target->SetAccessor(MAXCOLORPAIRS_STATE_SYMBOL, MaxcolorpairsStateGetter);
-      target->SetAccessor(RAW_STATE_SYMBOL, RawStateGetter, RawStateSetter);
-      target->SetAccessor(String::NewSymbol("numwins"), NumwinsGetter);
-      target->SetAccessor(String::NewSymbol("ACS"), ACSConstsGetter);
-      target->SetAccessor(String::NewSymbol("keys"), KeyConstsGetter);
-      target->SetAccessor(String::NewSymbol("colors"), ColorConstsGetter);
-      target->SetAccessor(String::NewSymbol("attrs"), AttrConstsGetter);
+      target->SetAccessor(echo_state_symbol, EchoStateGetter, EchoStateSetter);
+      target->SetAccessor(showcursor_state_symbol, ShowcursorStateGetter,
+                          ShowcursorStateSetter);
+      target->SetAccessor(lines_state_symbol, LinesStateGetter);
+      target->SetAccessor(cols_state_symbol, ColsStateGetter);
+      target->SetAccessor(tabsize_state_symbol, TabsizeStateGetter);
+      target->SetAccessor(hasmouse_state_symbol, HasmouseStateGetter);
+      target->SetAccessor(hascolors_state_symbol, HascolorsStateGetter);
+      target->SetAccessor(numcolors_state_symbol, NumcolorsStateGetter);
+      target->SetAccessor(maxcolorpairs_state_symbol, MaxcolorpairsStateGetter);
+      target->SetAccessor(raw_state_symbol, RawStateGetter, RawStateSetter);
+      target->SetAccessor(numwins_symbol, NumwinsGetter);
+      target->SetAccessor(ACS_symbol, ACSConstsGetter);
+      target->SetAccessor(keys_symbol, KeyConstsGetter);
+      target->SetAccessor(colors_symbol, ColorConstsGetter);
+      target->SetAccessor(attrs_symbol, AttrConstsGetter);
       NODE_SET_METHOD(target, "cleanup", Resetscreen);
       NODE_SET_METHOD(target, "redraw", Redraw);
       NODE_SET_METHOD(target, "leave", LeaveNcurses);
@@ -420,9 +465,6 @@ class Window : public ObjectWrap {
       NODE_SET_METHOD(target, "colorBg", Colorbg);
       NODE_SET_METHOD(target, "dup2", Dup2);
       NODE_SET_METHOD(target, "dup", Dup);
-
-      emit_symbol = NODE_PSYMBOL("emit");
-      inputchar_symbol = NODE_PSYMBOL("inputChar");
 
       target->Set(name, window_constructor->GetFunction());
     }
@@ -1787,17 +1829,19 @@ class Window : public ObjectWrap {
       return scope.Close(Integer::New(ret));
     }
 
-    // -- Getters/Setters -----------------------------------------------------------------------
-    static Handle<Value> EchoStateGetter (Local<String> property, const AccessorInfo& info) {
-      assert(property == ECHO_STATE_SYMBOL);
+    // -- Getters/Setters ------------------------------------------------------
+    static Handle<Value> EchoStateGetter (Local<String> property,
+                                          const AccessorInfo& info) {
+      assert(property == echo_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Boolean::New(MyPanel::echo()));
     }
 
-    static void EchoStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
-      assert(property == ECHO_STATE_SYMBOL);
+    static void EchoStateSetter (Local<String> property, Local<Value> value,
+                                 const AccessorInfo& info) {
+      assert(property == echo_state_symbol);
 
       if (!value->IsBoolean()) {
         ThrowException(Exception::TypeError(
@@ -1808,16 +1852,18 @@ class Window : public ObjectWrap {
       MyPanel::echo(value->BooleanValue());
     }
 
-    static Handle<Value> ShowcursorStateGetter (Local<String> property, const AccessorInfo& info) {
-      assert(property == SHOWCURSOR_STATE_SYMBOL);
+    static Handle<Value> ShowcursorStateGetter (Local<String> property,
+                                                const AccessorInfo& info) {
+      assert(property == showcursor_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Boolean::New(MyPanel::showCursor()));
     }
 
-    static void ShowcursorStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
-      assert(property == SHOWCURSOR_STATE_SYMBOL);
+    static void ShowcursorStateSetter (Local<String> property, Local<Value> value,
+                                       const AccessorInfo& info) {
+      assert(property == showcursor_state_symbol);
 
       if (!value->IsBoolean()) {
         ThrowException(Exception::TypeError(
@@ -1827,142 +1873,157 @@ class Window : public ObjectWrap {
       MyPanel::showCursor(value->BooleanValue());
     }
 
-    static Handle<Value> LinesStateGetter (Local<String> property, const AccessorInfo& info) {
-      assert(property == LINES_STATE_SYMBOL);
+    static Handle<Value> LinesStateGetter (Local<String> property,
+                                           const AccessorInfo& info) {
+      assert(property == lines_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Integer::New(LINES));
     }
 
-    static Handle<Value> ColsStateGetter (Local<String> property, const AccessorInfo& info) {
-      assert(property == COLS_STATE_SYMBOL);
+    static Handle<Value> ColsStateGetter (Local<String> property,
+                                          const AccessorInfo& info) {
+      assert(property == cols_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Integer::New(COLS));
     }
 
-    static Handle<Value> TabsizeStateGetter (Local<String> property, const AccessorInfo& info) {
-      assert(property == TABSIZE_STATE_SYMBOL);
+    static Handle<Value> TabsizeStateGetter (Local<String> property,
+                                             const AccessorInfo& info) {
+      assert(property == tabsize_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Integer::New(TABSIZE));
     }
 
-    static Handle<Value> HasmouseStateGetter (Local<String> property, const AccessorInfo& info) {
-      assert(property == HASMOUSE_STATE_SYMBOL);
+    static Handle<Value> HasmouseStateGetter (Local<String> property,
+                                              const AccessorInfo& info) {
+      assert(property == hasmouse_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Boolean::New(MyPanel::hasMouse()));
     }
 
-    static Handle<Value> HiddenStateGetter (Local<String> property, const AccessorInfo& info) {
+    static Handle<Value> HiddenStateGetter (Local<String> property,
+                                            const AccessorInfo& info) {
       Window *win = ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
-      assert(property == HIDDEN_STATE_SYMBOL);
+      assert(property == hidden_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Boolean::New(win->panel()->hidden()));
     }
 
-    static Handle<Value> HeightStateGetter (Local<String> property, const AccessorInfo& info) {
+    static Handle<Value> HeightStateGetter (Local<String> property,
+                                            const AccessorInfo& info) {
       Window *win = ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
-      assert(property == HEIGHT_STATE_SYMBOL);
+      assert(property == height_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Integer::New(win->panel()->height()));
     }
 
-    static Handle<Value> WidthStateGetter (Local<String> property, const AccessorInfo& info) {
+    static Handle<Value> WidthStateGetter (Local<String> property,
+                                           const AccessorInfo& info) {
       Window *win = ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
-      assert(property == WIDTH_STATE_SYMBOL);
+      assert(property == width_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Integer::New(win->panel()->width()));
     }
 
-    static Handle<Value> BegxStateGetter (Local<String> property, const AccessorInfo& info) {
+    static Handle<Value> BegxStateGetter (Local<String> property,
+                                          const AccessorInfo& info) {
       Window *win = ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
-      assert(property == BEGX_STATE_SYMBOL);
+      assert(property == begx_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Integer::New(win->panel()->begx()));
     }
 
-    static Handle<Value> BegyStateGetter (Local<String> property, const AccessorInfo& info) {
+    static Handle<Value> BegyStateGetter (Local<String> property,
+                                          const AccessorInfo& info) {
       Window *win = ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
-      assert(property == BEGY_STATE_SYMBOL);
+      assert(property == begy_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Integer::New(win->panel()->begy()));
     }
 
-    static Handle<Value> CurxStateGetter (Local<String> property, const AccessorInfo& info) {
+    static Handle<Value> CurxStateGetter (Local<String> property,
+                                          const AccessorInfo& info) {
       Window *win = ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
-      assert(property == CURX_STATE_SYMBOL);
+      assert(property == curx_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Integer::New(win->panel()->curx()));
     }
 
-    static Handle<Value> CuryStateGetter (Local<String> property, const AccessorInfo& info) {
+    static Handle<Value> CuryStateGetter (Local<String> property,
+                                          const AccessorInfo& info) {
       Window *win = ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
-      assert(property == CURY_STATE_SYMBOL);
+      assert(property == cury_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Integer::New(win->panel()->cury()));
     }
 
-    static Handle<Value> MaxxStateGetter (Local<String> property, const AccessorInfo& info) {
+    static Handle<Value> MaxxStateGetter (Local<String> property,
+                                          const AccessorInfo& info) {
       Window *win = ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
-      assert(property == MAXX_STATE_SYMBOL);
+      assert(property == maxx_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Integer::New(win->panel()->maxx()));
     }
 
-    static Handle<Value> MaxyStateGetter (Local<String> property, const AccessorInfo& info) {
+    static Handle<Value> MaxyStateGetter (Local<String> property,
+                                          const AccessorInfo& info) {
       Window *win = ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
-      assert(property == MAXY_STATE_SYMBOL);
+      assert(property == maxy_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Integer::New(win->panel()->maxy()));
     }
 
-    static Handle<Value> BkgdStateGetter (Local<String> property, const AccessorInfo& info) {
+    static Handle<Value> BkgdStateGetter (Local<String> property,
+                                          const AccessorInfo& info) {
       Window *win = ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
-      assert(property == BKGD_STATE_SYMBOL);
+      assert(property == bkgd_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Integer::NewFromUnsigned(win->panel()->getbkgd()));
     }
 
-    static void BkgdStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
+    static void BkgdStateSetter (Local<String> property, Local<Value> value,
+                                 const AccessorInfo& info) {
       Window *win = ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
-      assert(property == BKGD_STATE_SYMBOL);
+      assert(property == bkgd_state_symbol);
       unsigned int val = 32;
 
       if (!value->IsUint32() && !value->IsString()) {
@@ -1980,50 +2041,56 @@ class Window : public ObjectWrap {
       win->panel()->bkgd(val);
     }
 
-    static Handle<Value> HascolorsStateGetter (Local<String> property, const AccessorInfo& info) {
-      assert(property == HASCOLORS_STATE_SYMBOL);
+    static Handle<Value> HascolorsStateGetter (Local<String> property,
+                                               const AccessorInfo& info) {
+      assert(property == hascolors_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Boolean::New(MyPanel::has_colors()));
     }
 
-    static Handle<Value> NumcolorsStateGetter (Local<String> property, const AccessorInfo& info) {
-      assert(property == NUMCOLORS_STATE_SYMBOL);
+    static Handle<Value> NumcolorsStateGetter (Local<String> property,
+                                               const AccessorInfo& info) {
+      assert(property == numcolors_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Integer::New(MyPanel::num_colors()));
     }
 
-    static Handle<Value> MaxcolorpairsStateGetter (Local<String> property, const AccessorInfo& info) {
-      assert(property == MAXCOLORPAIRS_STATE_SYMBOL);
+    static Handle<Value> MaxcolorpairsStateGetter (Local<String> property,
+                                                   const AccessorInfo& info) {
+      assert(property == maxcolorpairs_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Integer::New(MyPanel::max_pairs()));
     }
 
-    static Handle<Value> WintouchedStateGetter (Local<String> property, const AccessorInfo& info) {
+    static Handle<Value> WintouchedStateGetter (Local<String> property,
+                                                const AccessorInfo& info) {
       Window *win = ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
-      assert(property == WINTOUCHED_STATE_SYMBOL);
+      assert(property == wintouched_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Boolean::New(win->panel()->is_wintouched()));
     }
 
-    static Handle<Value> RawStateGetter (Local<String> property, const AccessorInfo& info) {
-      assert(property == RAW_STATE_SYMBOL);
+    static Handle<Value> RawStateGetter (Local<String> property,
+                                         const AccessorInfo& info) {
+      assert(property == raw_state_symbol);
 
       HandleScope scope;
 
       return scope.Close(Boolean::New(MyPanel::raw()));
     }
 
-    static void RawStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
-      assert(property == RAW_STATE_SYMBOL);
+    static void RawStateSetter (Local<String> property, Local<Value> value,
+                                const AccessorInfo& info) {
+      assert(property == raw_state_symbol);
 
       if (!value->IsBoolean()) {
         ThrowException(Exception::TypeError(
