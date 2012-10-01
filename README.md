@@ -92,12 +92,6 @@ Module Properties
 
 * **numwins** - _Integer_ [Read-only] - Returns the number of currently open windows.
 
-* **echo** - _Boolean_ [Read/Write] - Enable/disable local echoing of keyboard input
-
-* **showCursor** - _Boolean_ [Read/Write] - Show/hide the cursor
-
-* **raw** - _Boolean_ [Read/Write] - Enable/disable terminal's raw mode
-
 * **lines** - _Integer_ [Read-only] - The total number of rows of the terminal
 
 * **cols** - _Integer_ [Read-only] - The total number of columns of the terminal
@@ -111,6 +105,12 @@ Module Properties
 * **numColors** - _Integer_ [Read-only] - Indicates the (maximum) number of colors the terminal supports colors
 
 * **maxColorPairs** - _Integer_ [Read-only] - The maximum number of foreground-background color pairs supported by the terminal
+
+* **echo** - _Boolean_ [Read/Write] - Enable/disable local echoing of keyboard input
+
+* **showCursor** - _Boolean_ [Read/Write] - Show/hide the cursor
+
+* **raw** - _Boolean_ [Read/Write] - Enable/disable terminal's raw mode
 
 
 Window Events
@@ -238,8 +238,6 @@ Window Functions
 Window Properties
 -------------------
 
-* **bkgd** - _Attributes_ [Read/Write] - Get/set the window's background attributes
-
 * **hidden** - _Boolean_ [Read-only] - Is this window hidden?
 
 * **height** - _Integer_ [Read-only] - Current window height
@@ -259,6 +257,8 @@ Window Properties
 * **maxy** - _Integer_ [Read-only] - Largest row number for this window
 
 * **touched** - _Integer_ [Read-only] - Indicates whether the window has been marked as modified
+
+* **bkgd** - _Attributes_ [Read/Write] - Get/set the window's background attributes
 
 
 Additional notes
