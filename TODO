@@ -12,5 +12,3 @@
 * Add more useful widgets
 
 * More tests/examples
-
-* Add option to wscript to allow use of a shared ncurses library instead

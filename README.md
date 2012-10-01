@@ -7,24 +7,7 @@ node-ncurses is an ncurses binding for [node.js](http://nodejs.org/).
 Requirements
 ============
 
-* [node.js](http://nodejs.org/) -- v0.1.94+
-
-To build node-curses:
-
-    node-waf configure build
-
-
-Troubleshooting
-===============
-
-If you encounter "Error opening terminal" while executing one of the examples or
-any other script that uses node-ncurses, do this:
-
-* Ensure you have built node-ncurses properly
-* Change to `deps/ncurses` in the source package
-* Execute `sudo make install.data`
-
-That should solve this particular problem.
+* [node.js](http://nodejs.org/) -- v0.6.0+
 
 
 Terminology
