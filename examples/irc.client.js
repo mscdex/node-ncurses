@@ -1,6 +1,6 @@
 /* Press ESC to bring up a window list to switch between windows */
 
-var nc = require('../ncurses'),
+var nc = require('..'),
     irc = require('./deps/irc'),
     widgets = require('../lib/widgets');
 var connections = [], config = {

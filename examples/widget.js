@@ -1,5 +1,5 @@
-var nc=require('../ncurses'), widgets=require('../lib/widgets'),
-    path=require('path');
+var nc = require('..'), widgets = require('../lib/widgets'),
+    path = require('path');
 var exampleList = Object.keys(widgets).concat(['FileViewer']), which;
 
 if (process.argv.length !== 3 || exampleList.indexOf(process.argv[2]) === -1) {

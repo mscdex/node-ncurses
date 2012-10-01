@@ -1,4 +1,4 @@
-var nc=require('../ncurses');
+var nc = require('..');
 function pad(num) {
   num = ''+num;
   var digits = num.length;
