@@ -17,6 +17,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -2157,25 +2158,28 @@ class Window : public ObjectWrap {
         return;
 
       if (revents & UV_READABLE) {
-        int chr;
-        char tmp[2];
+        wint_t chr;
+        int ret;
+        wchar_t tmp[2];
         tmp[1] = 0;
-        while ((chr = getch()) != ERR) {
+        while ((ret = get_wch(&chr)) != ERR) {
           // 410 == KEY_RESIZE
-          if (chr == 410 || !topmost_panel || !topmost_panel->getWindow() || !topmost_panel->getPanel()) {
+          if (chr == 410 || !topmost_panel || !topmost_panel->getWindow()
+              || !topmost_panel->getPanel()) {
             //if (chr != 410)
             //  ungetch(chr);
             return;
           }
           tmp[0] = chr;
 
-          Handle<Value> emit_argv[3] = {
+          Handle<Value> emit_argv[4] = {
             inputchar_symbol,
-            String::New(tmp),
-            Integer::New(chr)
+            String::New((const uint16_t*) tmp),
+            Integer::New(chr),
+            Boolean::New(ret == KEY_CODE_YES)
           };
           TryCatch try_catch;
-          Emit->Call(obj->handle_, 3, emit_argv);
+          Emit->Call(obj->handle_, 4, emit_argv);
           if (try_catch.HasCaught())
             FatalException(try_catch);
         }
