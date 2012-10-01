@@ -30,7 +30,13 @@ node-ncurses exposes only one class: **Window**.
 * _Attributes_ is an (unsigned) integer used as a bitmask for holding window attributes. All available attributes are stored in the 'attrs' property of the module.
 
 * _ACS\_Character_ is a special character used when dealing with line graphics. These are automatically determined at runtime by ncurses and thus cannot be defined as constants. Instead, they are accessible statically via the Window class after at least one window has been created (so that ncurses has initialized this special character set). See the **Additional notes** at the bottom for a list of the available characters.
-    * An _ACS\_Character_ can currently be retrieved by using the 'ACS' property of the module (example: "var nc = require('ncurses'), win = new Window(); win.hline(nc.cols, nc.ACS.DIAMOND);")
+    * An _ACS\_Character_ can currently be retrieved by using the 'ACS' property of the module. Example:
+
+```javascript
+      var nc = require('ncurses'),
+          win = new Window();
+      win.hline(nc.cols, nc.ACS.DIAMOND);
+```
 
 
 Module Functions
