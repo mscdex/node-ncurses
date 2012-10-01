@@ -55,7 +55,7 @@ extern "C" {
  */
 
 #undef  NCURSES_CONST
-#define NCURSES_CONST /*nothing*/
+#define NCURSES_CONST const /*nothing*/
 
 #undef  NCURSES_SBOOL
 #define NCURSES_SBOOL char

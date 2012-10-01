@@ -49,7 +49,7 @@ extern "C"
 #include <sys/types.h>
 
 #undef  NCURSES_CONST 
-#define NCURSES_CONST /*nothing*/ 
+#define NCURSES_CONST const /*nothing*/ 
 
 #undef  NCURSES_OSPEED 
 #define NCURSES_OSPEED short 
