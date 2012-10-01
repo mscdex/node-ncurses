@@ -39,7 +39,10 @@ typedef struct {
 static panel_node* head_panel = NULL;
 static MyPanel* topmost_panel = NULL;
 
+static Persistent<FunctionTemplate> window_constructor;
+static Persistent<Function> Emit;
 static Persistent<String> emit_symbol;
+static Persistent<String> inputchar_symbol;
 static Persistent<Object> ACS_Chars;
 static Persistent<Object> Keys;
 static Persistent<Object> Attrs;
@@ -73,15 +76,9 @@ const char* ToCString(const v8::String::Utf8Value& value) {
   return *value ? *value : "<string conversion failed>";
 }
 
-void appendLog(const char* str) {
-  FILE* fp = fopen("debug.log", "a");
-  if (fp) {
-    fputs(str, fp);
-    fclose(fp);
-  }
-}
 static int wincounter = 0;
-ev_io read_watcher_;
+uv_poll_t* read_watcher_;
+
 class MyPanel : public NCursesPanel {
   private:
     void setup() {
@@ -109,12 +106,11 @@ class MyPanel : public NCursesPanel {
       // Initialize color support if it's available
       if (::has_colors())
         ::start_color();
-        
+
       // Set non-blocking mode and tell ncurses we want to receive one character
       // at a time instead of one line at a time
       ::nodelay(w, true);
       ::cbreak();
-      //::halfdelay(1);
       ::keypad(w, true);
 
       // Setup a default palette
@@ -127,7 +123,7 @@ class MyPanel : public NCursesPanel {
             color = 0;
         }
       }
-      
+
       // Set the window's default color pair
       ::wcolor_set(w, 0, NULL);
 
@@ -142,15 +138,9 @@ class MyPanel : public NCursesPanel {
     MyPanel(Window* win, int nlines, int ncols, int begin_y = 0, int begin_x = 0)
       : NCursesPanel(nlines,ncols,begin_y,begin_x), assocwin(win) {
       this->setup();
-      /*char str[1024];
-      sprintf(str, "%s%s%s%d\n", "MyPanel(int,int,int,int) -- topmost_panel ", (topmost_panel ? "!" : "="), "= NULL -- c == ", c);
-      appendLog(str);*/
     }
     MyPanel(Window* win) : NCursesPanel(), assocwin(win) {
       this->setup();
-      /*char str[1024];
-      sprintf(str, "%s%s%s%d\n", "MyPanel() -- topmost_panel ", (topmost_panel ? "!" : "="), "= NULL -- c == ", c);
-      appendLog(str);*/
     }
     ~MyPanel() {
       panel_node* cur = head_panel;
@@ -176,7 +166,7 @@ class MyPanel : public NCursesPanel {
       return assocwin;
     }
     static void updateTopmost() {
-      PANEL *pan, *panLastVis;
+      PANEL *pan, *panLastVis = NULL;
       panel_node *cur = head_panel;
 
       pan = ::panel_above(NULL);
@@ -256,6 +246,7 @@ class MyPanel : public NCursesPanel {
           return COLOR_PAIR(pair);
         }
       }
+      return 0;
     }
     static void setFgcolor(int pair, short color) {
       short fore, back;
@@ -313,90 +304,93 @@ class Window : public ObjectWrap {
   public:
     static void  Initialize (Handle<Object> target) {
       HandleScope scope;
-      
-      Local<FunctionTemplate> t = FunctionTemplate::New(New);
-      t->InstanceTemplate()->SetInternalFieldCount(1);
-      t->SetClassName(String::NewSymbol("Window"));
+
+      Local<FunctionTemplate> tpl = FunctionTemplate::New(New);
+      Local<String> name = String::NewSymbol("Window");
+
+      window_constructor = Persistent<FunctionTemplate>::New(tpl);
+      window_constructor->InstanceTemplate()->SetInternalFieldCount(1);
+      window_constructor->SetClassName(name);
 
       /* Panel-specific methods */
       // TODO: color_set?, overlay, overwrite
-      NODE_SET_PROTOTYPE_METHOD(t, "clearok", Clearok);
-      NODE_SET_PROTOTYPE_METHOD(t, "scrollok", Scrollok);
-      NODE_SET_PROTOTYPE_METHOD(t, "idlok", Idlok);
-      NODE_SET_PROTOTYPE_METHOD(t, "idcok", Idcok);
-      NODE_SET_PROTOTYPE_METHOD(t, "leaveok", Leaveok);
-      NODE_SET_PROTOTYPE_METHOD(t, "syncok", Syncok);
-      NODE_SET_PROTOTYPE_METHOD(t, "immedok", Immedok);
-      NODE_SET_PROTOTYPE_METHOD(t, "keypad", Keypad);
-      NODE_SET_PROTOTYPE_METHOD(t, "meta", Meta);
-      NODE_SET_PROTOTYPE_METHOD(t, "standout", Standout);
-      NODE_SET_PROTOTYPE_METHOD(t, "hide", Hide);
-      NODE_SET_PROTOTYPE_METHOD(t, "show", Show);
-      NODE_SET_PROTOTYPE_METHOD(t, "top", Top);
-      NODE_SET_PROTOTYPE_METHOD(t, "bottom", Bottom);
-      NODE_SET_PROTOTYPE_METHOD(t, "move", Mvwin);
-      NODE_SET_PROTOTYPE_METHOD(t, "refresh", Refresh);
-      NODE_SET_PROTOTYPE_METHOD(t, "noutrefresh", Noutrefresh);
-      NODE_SET_PROTOTYPE_METHOD(t, "frame", Frame);
-      NODE_SET_PROTOTYPE_METHOD(t, "boldframe", Boldframe);
-      NODE_SET_PROTOTYPE_METHOD(t, "label", Label);
-      NODE_SET_PROTOTYPE_METHOD(t, "centertext", Centertext);
-      NODE_SET_PROTOTYPE_METHOD(t, "cursor", Move);
-      NODE_SET_PROTOTYPE_METHOD(t, "insertln", Insertln);
-      NODE_SET_PROTOTYPE_METHOD(t, "insdelln", Insdelln);
-      NODE_SET_PROTOTYPE_METHOD(t, "insstr", Insstr);
-      NODE_SET_PROTOTYPE_METHOD(t, "attron", Attron);
-      NODE_SET_PROTOTYPE_METHOD(t, "attroff", Attroff);
-      NODE_SET_PROTOTYPE_METHOD(t, "attrset", Attrset);
-      NODE_SET_PROTOTYPE_METHOD(t, "attrget", Attrget);
-      NODE_SET_PROTOTYPE_METHOD(t, "box", Box);
-      NODE_SET_PROTOTYPE_METHOD(t, "border", Border);
-      NODE_SET_PROTOTYPE_METHOD(t, "hline", Hline);
-      NODE_SET_PROTOTYPE_METHOD(t, "vline", Vline);
-      NODE_SET_PROTOTYPE_METHOD(t, "erase", Erase);
-      NODE_SET_PROTOTYPE_METHOD(t, "clear", Clear);
-      NODE_SET_PROTOTYPE_METHOD(t, "clrtobot", Clrtobot);
-      NODE_SET_PROTOTYPE_METHOD(t, "clrtoeol", Clrtoeol);
-      NODE_SET_PROTOTYPE_METHOD(t, "delch", Delch);
-      NODE_SET_PROTOTYPE_METHOD(t, "deleteln", Deleteln);
-      NODE_SET_PROTOTYPE_METHOD(t, "scroll", Scroll);
-      NODE_SET_PROTOTYPE_METHOD(t, "setscrreg", Setscrreg);
-      NODE_SET_PROTOTYPE_METHOD(t, "touchlines", Touchln);
-      NODE_SET_PROTOTYPE_METHOD(t, "is_linetouched", Is_linetouched);
-      NODE_SET_PROTOTYPE_METHOD(t, "redrawln", Redrawln);
-      NODE_SET_PROTOTYPE_METHOD(t, "touch", Touchwin);
-      NODE_SET_PROTOTYPE_METHOD(t, "untouch", Untouchwin);
-      NODE_SET_PROTOTYPE_METHOD(t, "resize", Wresize);
-      NODE_SET_PROTOTYPE_METHOD(t, "print", Print);
-      NODE_SET_PROTOTYPE_METHOD(t, "addstr", Addstr);
-      NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
-      NODE_SET_PROTOTYPE_METHOD(t, "syncdown", Syncdown);
-      NODE_SET_PROTOTYPE_METHOD(t, "syncup", Syncup);
-      NODE_SET_PROTOTYPE_METHOD(t, "cursyncup", Cursyncup);
-      NODE_SET_PROTOTYPE_METHOD(t, "copywin", Copywin);
-      NODE_SET_PROTOTYPE_METHOD(t, "redraw", Redrawwin);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "clearok", Clearok);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "scrollok", Scrollok);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "idlok", Idlok);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "idcok", Idcok);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "leaveok", Leaveok);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "syncok", Syncok);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "immedok", Immedok);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "keypad", Keypad);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "meta", Meta);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "standout", Standout);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "hide", Hide);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "show", Show);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "top", Top);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "bottom", Bottom);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "move", Mvwin);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "refresh", Refresh);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "noutrefresh", Noutrefresh);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "frame", Frame);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "boldframe", Boldframe);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "label", Label);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "centertext", Centertext);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "cursor", Move);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "insertln", Insertln);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "insdelln", Insdelln);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "insstr", Insstr);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "attron", Attron);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "attroff", Attroff);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "attrset", Attrset);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "attrget", Attrget);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "box", Box);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "border", Border);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "hline", Hline);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "vline", Vline);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "erase", Erase);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "clear", Clear);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "clrtobot", Clrtobot);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "clrtoeol", Clrtoeol);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "delch", Delch);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "deleteln", Deleteln);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "scroll", Scroll);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "setscrreg", Setscrreg);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "touchlines", Touchln);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "is_linetouched", Is_linetouched);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "redrawln", Redrawln);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "touch", Touchwin);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "untouch", Untouchwin);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "resize", Wresize);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "print", Print);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "addstr", Addstr);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "close", Close);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "syncdown", Syncdown);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "syncup", Syncup);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "cursyncup", Cursyncup);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "copywin", Copywin);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "redraw", Redrawwin);
 
       /* Attribute-related window functions */
-      NODE_SET_PROTOTYPE_METHOD(t, "addch", Addch);
-      NODE_SET_PROTOTYPE_METHOD(t, "echochar", Echochar);
-      NODE_SET_PROTOTYPE_METHOD(t, "inch", Inch);
-      NODE_SET_PROTOTYPE_METHOD(t, "insch", Insch);
-      NODE_SET_PROTOTYPE_METHOD(t, "chgat", Chgat);
-      //NODE_SET_PROTOTYPE_METHOD(t, "addchstr", Addchstr);
-      //NODE_SET_PROTOTYPE_METHOD(t, "inchstr", Inchstr);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "addch", Addch);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "echochar", Echochar);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "inch", Inch);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "insch", Insch);
+      NODE_SET_PROTOTYPE_METHOD(window_constructor, "chgat", Chgat);
+      //NODE_SET_PROTOTYPE_METHOD(window_constructor, "addchstr", Addchstr);
+      //NODE_SET_PROTOTYPE_METHOD(window_constructor, "inchstr", Inchstr);
 
       /* Window properties */
-      t->PrototypeTemplate()->SetAccessor(BKGD_STATE_SYMBOL, BkgdStateGetter, BkgdStateSetter);
-      t->PrototypeTemplate()->SetAccessor(HIDDEN_STATE_SYMBOL, HiddenStateGetter);
-      t->PrototypeTemplate()->SetAccessor(HEIGHT_STATE_SYMBOL, HeightStateGetter);
-      t->PrototypeTemplate()->SetAccessor(WIDTH_STATE_SYMBOL, WidthStateGetter);
-      t->PrototypeTemplate()->SetAccessor(BEGX_STATE_SYMBOL, BegxStateGetter);
-      t->PrototypeTemplate()->SetAccessor(BEGY_STATE_SYMBOL, BegyStateGetter);
-      t->PrototypeTemplate()->SetAccessor(CURX_STATE_SYMBOL, CurxStateGetter);
-      t->PrototypeTemplate()->SetAccessor(CURY_STATE_SYMBOL, CuryStateGetter);
-      t->PrototypeTemplate()->SetAccessor(MAXX_STATE_SYMBOL, MaxxStateGetter);
-      t->PrototypeTemplate()->SetAccessor(MAXY_STATE_SYMBOL, MaxyStateGetter);
-      t->PrototypeTemplate()->SetAccessor(WINTOUCHED_STATE_SYMBOL, WintouchedStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(BKGD_STATE_SYMBOL, BkgdStateGetter, BkgdStateSetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(HIDDEN_STATE_SYMBOL, HiddenStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(HEIGHT_STATE_SYMBOL, HeightStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(WIDTH_STATE_SYMBOL, WidthStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(BEGX_STATE_SYMBOL, BegxStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(BEGY_STATE_SYMBOL, BegyStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(CURX_STATE_SYMBOL, CurxStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(CURY_STATE_SYMBOL, CuryStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(MAXX_STATE_SYMBOL, MaxxStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(MAXY_STATE_SYMBOL, MaxyStateGetter);
+      window_constructor->PrototypeTemplate()->SetAccessor(WINTOUCHED_STATE_SYMBOL, WintouchedStateGetter);
 
       /* Global/Terminal properties and functions */
       target->SetAccessor(ECHO_STATE_SYMBOL, EchoStateGetter, EchoStateSetter);
@@ -428,26 +422,31 @@ class Window : public ObjectWrap {
       NODE_SET_METHOD(target, "dup", Dup);
 
       emit_symbol = NODE_PSYMBOL("emit");
+      inputchar_symbol = NODE_PSYMBOL("inputChar");
 
-      target->Set(String::NewSymbol("Window"), t->GetFunction());      
+      target->Set(name, window_constructor->GetFunction());
     }
-    
+
     void init(int nlines=-1, int ncols=-1, int begin_y=-1, int begin_x=-1) {
       static bool firstRun = true;
       if (stdin_fd < 0) {
         stdin_fd = STDIN_FILENO;
         int stdin_flags = fcntl(stdin_fd, F_GETFL, 0);
         int r = fcntl(stdin_fd, F_SETFL, stdin_flags | O_NONBLOCK);
-        if (r < 0)
-          throw "Unable to set stdin to non-block";
+        if (r < 0) {
+          ThrowException(Exception::Error(
+            String::New("Unable to set stdin to non-block")
+          ));
+          return;
+        }
       }
 
       if (firstRun) {
         // Setup input listener
-        ev_init(&read_watcher_, io_event);
-        read_watcher_.data = this;
-        ev_io_set(&read_watcher_, stdin_fd, EV_READ);
-        ev_io_start(EV_DEFAULT_ &read_watcher_);
+        read_watcher_ = new uv_poll_t;
+        read_watcher_->data = this;
+        uv_poll_init(uv_default_loop(), read_watcher_, stdin_fd);
+        uv_poll_start(read_watcher_, UV_READABLE, io_event);
       }
 
       if (nlines < 0 || ncols < 0 || begin_y < 0 || begin_x < 0)
@@ -619,26 +618,22 @@ class Window : public ObjectWrap {
     MyPanel* panel() {
       return panel_;
     }
-    
+
+    static void on_handle_close (uv_handle_t *handle) {
+      delete handle;
+    }
+
     void close() {
-      //appendLog("Internal close() called\n");
       if (panel_) {
         bool wasStdscr = panel_->isStdscr();
         if (wasStdscr) {
-          ev_io_stop(EV_DEFAULT_ &read_watcher_);
+          uv_poll_stop(read_watcher_);
+          uv_close((uv_handle_t *)read_watcher_, on_handle_close);
+          Unref();
         }
-        Unref();
         delete panel_;
         panel_ = NULL;
         MyPanel::updateTopmost();
-        /*char str[1024];
-        sprintf(str, "%s%s%s\n", "close() -- topmost_panel ", (topmost_panel ? "!" : "="), "= NULL");
-        appendLog(str);
-        if (topmost_panel) {
-          sprintf(str, "%s%p\n", "close() -- topmost_panel == ", topmost_panel);
-          appendLog(str);
-          //topmost_panel->top();
-        }*/
         if (wasStdscr)
           ::endwin();
       }
@@ -649,11 +644,10 @@ class Window : public ObjectWrap {
       HandleScope scope;
 
       Window *win;
-      bool doRef = false;
-      if (stdin_fd < 0) {
+
+      if (stdin_fd < 0)
         win = new Window();
-        doRef = true;
-      } else if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
+      else if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
         win = new Window(args[0]->Int32Value(), args[1]->Int32Value(), 0, 0);
       else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsInt32())
         win = new Window(args[0]->Int32Value(), args[1]->Int32Value(), args[2]->Int32Value(), 0);
@@ -664,10 +658,16 @@ class Window : public ObjectWrap {
           String::New("Invalid number and/or types of arguments")
         ));
       }
+
       win->Wrap(args.This());
-      //if (doRef)
-        win->Ref();
-      
+      win->Ref();
+
+      if (Emit.IsEmpty()) {
+        Emit = Persistent<Function>::New(
+                  Local<Function>::Cast(win->handle_->Get(emit_symbol))
+               );
+      }
+
       return args.This();
     }
 
@@ -675,12 +675,12 @@ class Window : public ObjectWrap {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
 
-      if (win->panel() != NULL) {
+      if (win->panel() != NULL)
         win->close();
-      }
+
       return Undefined();
     }
-    
+
     static Handle<Value> Hide (const Arguments& args) {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
@@ -689,7 +689,7 @@ class Window : public ObjectWrap {
 
       return Undefined();
     }
-    
+
     static Handle<Value> Show (const Arguments& args) {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
@@ -698,7 +698,7 @@ class Window : public ObjectWrap {
 
       return Undefined();
     }
-    
+
     static Handle<Value> Top (const Arguments& args) {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
@@ -707,7 +707,7 @@ class Window : public ObjectWrap {
 
       return Undefined();
     }
-    
+
     static Handle<Value> Bottom (const Arguments& args) {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
@@ -716,14 +716,14 @@ class Window : public ObjectWrap {
 
       return Undefined();
     }
-    
+
     static Handle<Value> Mvwin (const Arguments& args) {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
 
-      int ret;
+      int ret = 0;
       if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
-        win->panel()->mvwin(args[0]->Int32Value(), args[1]->Int32Value());
+        ret = win->panel()->mvwin(args[0]->Int32Value(), args[1]->Int32Value());
       else {
         return ThrowException(Exception::Error(
           String::New("Invalid number and/or types of arguments")
@@ -741,7 +741,7 @@ class Window : public ObjectWrap {
 
       return scope.Close(Integer::New(ret));
     }
-    
+
     static Handle<Value> Noutrefresh (const Arguments& args) {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
@@ -750,7 +750,7 @@ class Window : public ObjectWrap {
 
       return scope.Close(Integer::New(ret));
     }
-    
+
     static Handle<Value> Redraw (const Arguments& args) {
       HandleScope scope;
 
@@ -758,7 +758,7 @@ class Window : public ObjectWrap {
 
       return Undefined();
     }
-    
+
     static Handle<Value> Frame (const Arguments& args) {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
@@ -802,7 +802,7 @@ class Window : public ObjectWrap {
 
       return Undefined();
     }
-    
+
     static Handle<Value> Label (const Arguments& args) {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
@@ -822,7 +822,7 @@ class Window : public ObjectWrap {
 
       return Undefined();
     }
-    
+
     static Handle<Value> Centertext (const Arguments& args) {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
@@ -838,7 +838,7 @@ class Window : public ObjectWrap {
 
       return Undefined();
     }
-    
+
     static Handle<Value> Move (const Arguments& args) {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
@@ -854,7 +854,7 @@ class Window : public ObjectWrap {
 
       return scope.Close(Integer::New(ret));
     }
-    
+
     static Handle<Value> Addch (const Arguments& args) {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
@@ -872,7 +872,7 @@ class Window : public ObjectWrap {
 
       return scope.Close(Integer::New(ret));
     }
-    
+
     static Handle<Value> Echochar (const Arguments& args) {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
@@ -914,12 +914,12 @@ class Window : public ObjectWrap {
 
       return scope.Close(Integer::New(ret));
     }
-    
+
     // FIXME: addchstr requires a pointer to a chtype not an actual value, unlike the other ACS_*-using methods
     /*static Handle<Value> Addchstr (const Arguments& args) {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
-      
+
       int ret;
       if (args.Length() == 1 && args[0]->IsUint32())
         ret = win->panel()->addchstr(args[0]->Uint32Value(), -1);
@@ -937,7 +937,7 @@ class Window : public ObjectWrap {
 
       return scope.Close(Integer::New(ret));
     }*/
-      
+
     static Handle<Value> Inch (const Arguments& args) {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
@@ -955,12 +955,12 @@ class Window : public ObjectWrap {
 
       return scope.Close(Integer::NewFromUnsigned(ret));
     }
-    
+
     // FIXME: Need pointer to chtype instead of actual value
     /*static Handle<Value> Inchstr (const Arguments& args) {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
-      
+
       int ret;
       if (args.Length() == 1 && args[0]->IsUint32())
         ret = win->panel()->inchstr(args[0]->Uint32Value(), -1);
@@ -1325,7 +1325,7 @@ class Window : public ObjectWrap {
     /*static Handle<Value> Touchline (const Arguments& args) {
       Window *win = ObjectWrap::Unwrap<Window>(args.This());
       HandleScope scope;
-      
+
       int ret;
       if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
         ret = win->panel()->touchline(args[0]->Int32Value(), args[1]->Int32Value());
@@ -1457,7 +1457,7 @@ class Window : public ObjectWrap {
       if (args.Length() == 1 && args[0]->IsString()) {
         String::Utf8Value str(args[0]->ToString());
         ret = win->panel()->printw("%s", ToCString(str));
-      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString()) { 
+      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32() && args[2]->IsString()) {
         String::Utf8Value str(args[2]->ToString());
         ret = win->panel()->printw(args[0]->Int32Value(), args[1]->Int32Value(), "%s", ToCString(str));
       } else {
@@ -1795,7 +1795,7 @@ class Window : public ObjectWrap {
 
       return scope.Close(Boolean::New(MyPanel::echo()));
     }
-    
+
     static void EchoStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
       assert(property == ECHO_STATE_SYMBOL);
 
@@ -1815,7 +1815,7 @@ class Window : public ObjectWrap {
 
       return scope.Close(Boolean::New(MyPanel::showCursor()));
     }
-    
+
     static void ShowcursorStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
       assert(property == SHOWCURSOR_STATE_SYMBOL);
 
@@ -2021,7 +2021,7 @@ class Window : public ObjectWrap {
 
       return scope.Close(Boolean::New(MyPanel::raw()));
     }
-    
+
     static void RawStateSetter (Local<String> property, Local<Value> value, const AccessorInfo& info) {
       assert(property == RAW_STATE_SYMBOL);
 
@@ -2069,28 +2069,27 @@ class Window : public ObjectWrap {
       this->init();
       assert(panel_ != NULL);
     }
-    
+
     Window(int nlines, int ncols, int begin_y, int begin_x) : ObjectWrap() {
       panel_ = NULL;
       this->init(nlines, ncols, begin_y, begin_x);
       assert(panel_ != NULL);
     }
-    
+
     ~Window() {
-    //appendLog("~Window()");
-      //if (panel_) {
-        //this->close();
-      //}
-      //assert(panel_ == NULL);
+
     }
-    
+
   private:
-    void Event (int revents) {
+    static void io_event (uv_poll_t* w, int status, int revents) {
       HandleScope scope;
-      if (revents & EV_ERROR)
+
+      Window *obj = static_cast<Window*>(w->data);
+
+      if (status < 0)
         return;
 
-      if (revents & EV_READ) {
+      if (revents & UV_READABLE) {
         int chr;
         char tmp[2];
         tmp[1] = 0;
@@ -2102,30 +2101,28 @@ class Window : public ObjectWrap {
             return;
           }
           tmp[0] = chr;
-          Local<Value> vChr[3];
-          vChr[0] = String::New("inputChar");
-          vChr[1] = String::New(tmp);
-          vChr[2] = Integer::New(chr);
-          Local<Value> emit_v = topmost_panel->getWindow()->handle_->Get(emit_symbol);
-          if (!emit_v->IsFunction()) return;
-          Local<Function> emit = Local<Function>::Cast(emit_v);
-          emit->Call(topmost_panel->getWindow()->handle_, 3, vChr);
+
+          Handle<Value> emit_argv[3] = {
+            inputchar_symbol,
+            String::New(tmp),
+            Integer::New(chr)
+          };
+          TryCatch try_catch;
+          Emit->Call(obj->handle_, 3, emit_argv);
+          if (try_catch.HasCaught())
+            FatalException(try_catch);
         }
       }
     }
 
-    static void
-    io_event (EV_P_ ev_io *w, int revents) {
-      Window *win = static_cast<Window*>(w->data);
-      win->Event(revents);
-    }
-    
     MyPanel *panel_;
-    
 };
 
-extern "C" void
-init (Handle<Object> target) {
-  HandleScope scope;
-  Window::Initialize(target);
+extern "C" {
+  void init (Handle<Object> target) {
+    HandleScope scope;
+    Window::Initialize(target);
+  }
+
+  NODE_MODULE(ncurses, init);
 }
