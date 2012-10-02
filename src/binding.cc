@@ -305,6 +305,7 @@ bool MyPanel::isRaw_ = false;
 
 class Window : public ObjectWrap {
   public:
+    Persistent<Function> Emit;
     static void  Initialize (Handle<Object> target) {
       HandleScope scope;
 
@@ -707,6 +708,10 @@ class Window : public ObjectWrap {
 
       win->Wrap(args.This());
       win->Ref();
+
+      win->Emit = Persistent<Function>::New(
+                    Local<Function>::Cast(win->handle_->Get(emit_symbol))
+                  );
 
       return args.This();
     }
@@ -2247,7 +2252,8 @@ class Window : public ObjectWrap {
     }
 
     ~Window() {
-
+      Emit.Dispose();
+      Emit.Clear();
     }
 
   private:
@@ -2280,12 +2286,10 @@ class Window : public ObjectWrap {
             Integer::New(chr),
             Boolean::New(ret == KEY_CODE_YES)
           };
-          Local<Function> Emit =
-              Local<Function>::Cast(
-                topmost_panel->getWindow()->handle_->Get(emit_symbol)
-              );
           TryCatch try_catch;
-          Emit->Call(topmost_panel->getWindow()->handle_, 4, emit_argv);
+          topmost_panel->getWindow()->Emit->Call(
+              topmost_panel->getWindow()->handle_, 4, emit_argv
+          );
           if (try_catch.HasCaught())
             FatalException(try_catch);
         }
