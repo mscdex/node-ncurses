@@ -1,7 +1,7 @@
 {
   'targets': [
     {
-      'target_name': 'ncurses',
+      'target_name': 'binding',
       'sources': [
         'src/binding.cc',
       ],
