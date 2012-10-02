@@ -48,6 +48,8 @@ Module Functions
 
 * **colorBg**(<_Integer_>colorPair) - _Integer_ - Returns the background color currently set for the given color pair number.
 
+* **setEscDelay**(<_Integer_>delay) - _(void)_ - Sets the duration (in milliseconds) to wait after ESC is pressed.
+
 * **cleanup**() - _(void)_ - Restores the terminal after using ncurses. This function is automatically called when the last window is closed and thus should never be used except when handling unexpected exceptions (i.e. in node.js's uncaughtException event) so that you can safely restore the terminal back to normal.
 
 * **redraw**() - _(void)_ - Redraws all windows.

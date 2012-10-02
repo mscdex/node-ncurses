@@ -455,6 +455,7 @@ class Window : public ObjectWrap {
       target->SetAccessor(keys_symbol, KeyConstsGetter);
       target->SetAccessor(colors_symbol, ColorConstsGetter);
       target->SetAccessor(attrs_symbol, AttrConstsGetter);
+      NODE_SET_METHOD(target, "setEscDelay", Setescdelay);
       NODE_SET_METHOD(target, "cleanup", Resetscreen);
       NODE_SET_METHOD(target, "redraw", Redraw);
       NODE_SET_METHOD(target, "leave", LeaveNcurses);
@@ -1768,6 +1769,20 @@ class Window : public ObjectWrap {
       HandleScope scope;
 
       ::endwin(); //MyPanel::resetScreen();
+
+      return Undefined();
+    }
+
+    static Handle<Value> Setescdelay (const Arguments& args) {
+      HandleScope scope;
+
+      if (args.Length() == 0 || !args[0]->IsInt32()) {
+        return ThrowException(Exception::Error(
+          String::New("Invalid argument")
+        ));
+      }
+
+      ::set_escdelay(args[0]->Int32Value());
 
       return Undefined();
     }
