@@ -11,6 +11,7 @@
 #  define STDOUT_FILENO 1
 #endif
 
+#include <ncurses_cfg.h>
 #include <cursesp.h>
 #include <node.h>
 #include <node_object_wrap.h>
@@ -2259,8 +2260,6 @@ class Window : public ObjectWrap {
   private:
     static void io_event (uv_poll_t* w, int status, int revents) {
       HandleScope scope;
-
-      Window *obj = static_cast<Window*>(w->data);
 
       if (status < 0)
         return;

@@ -13,6 +13,7 @@
         'ncurses',
       ],
       'all_dependent_settings': {
+        'includes': [ 'config/config.gypi' ],
         'include_dirs': [
           '.',
           'include',
