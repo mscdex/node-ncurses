@@ -1,4 +1,3 @@
-#./configure --without-debug --without-tests --without-progs --without-ada --enable-widec --enable-sigwinch --enable-ext-colors --enable-termcap
 {
   'targets': [
     {
@@ -237,11 +236,6 @@
       'cflags_cc+': [ '-O3' ],
       'cflags_c!': [ '-O2' ],
       'cflags_c+': [ '-O3' ],
-      #'conditions': [
-      #  ['target_arch=="x64"', {
-      #    'cflags+': [ '-fPIC' ]
-      #  }],
-      #],
     },
   ],
 }
