@@ -52,6 +52,7 @@
 #include <stdlib.h>
 #endif
 #define HAVE_LONG_FILE_NAMES 1
+#define MIXEDCASE_FILENAMES 1
 #define USE_DATABASE 1
 #define TERMINFO_DIRS "/usr/local/share/terminfo"
 #define TERMINFO "/usr/local/share/terminfo"
