@@ -3,6 +3,8 @@ Description
 
 node-ncurses is an ncurses binding for [node.js](http://nodejs.org/).
 
+**Note:** Mac OSX users may find themselves encountering bizarre output on their terminals in some situations. This is a known problem and basically requires more frequent Window.refresh()'ing to get everything to display properly.
+
 
 Requirements
 ============
