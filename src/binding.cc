@@ -2319,5 +2319,5 @@ extern "C" {
     Window::Initialize(target);
   }
 
-  NODE_MODULE(ncurses, init);
+  NODE_MODULE(binding, init);
 }
