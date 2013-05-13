@@ -9,7 +9,7 @@ node-ncurses is an ncurses binding for [node.js](http://nodejs.org/).
 Requirements
 ============
 
-* [node.js](http://nodejs.org/) -- v0.6.0+
+* [node.js](http://nodejs.org/) -- v0.8.0+
 
 
 Terminology
