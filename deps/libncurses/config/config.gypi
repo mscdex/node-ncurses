@@ -19,5 +19,8 @@
     [ 'OS=="freebsd"', {
       'include_dirs': [ 'freebsd' ],
     }],
+    [ 'OS=="solaris"', {
+      'include_dirs': [ 'solaris' ],
+    }],
   ],
 }
