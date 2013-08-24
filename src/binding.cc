@@ -30,6 +30,7 @@ class MyPanel;
 class Window;
 
 static int stdin_fd = -1;
+static bool start_rw_poll = true;
 
 typedef struct {
   void* prev; // panel_node
@@ -81,7 +82,7 @@ const char* ToCString(const v8::String::Utf8Value& value) {
 }
 
 static int wincounter = 0;
-uv_poll_t* read_watcher_;
+uv_poll_t* read_watcher_ = NULL;
 
 class MyPanel : public NCursesPanel {
   private:
@@ -473,7 +474,7 @@ class Window : public ObjectWrap {
     }
 
     void init(int nlines=-1, int ncols=-1, int begin_y=-1, int begin_x=-1) {
-      static bool firstRun = true;
+      static bool initialize_ACS = true;
       if (stdin_fd < 0) {
         stdin_fd = STDIN_FILENO;
         int stdin_flags = fcntl(stdin_fd, F_GETFL, 0);
@@ -486,12 +487,17 @@ class Window : public ObjectWrap {
         }
       }
 
-      if (firstRun) {
-        // Setup input listener
+      if (read_watcher_ == NULL) {
         read_watcher_ = new uv_poll_t;
         read_watcher_->data = this;
+        // Setup input listener
         uv_poll_init(uv_default_loop(), read_watcher_, stdin_fd);
+      }
+
+      if (start_rw_poll) {
+        // Start input listener
         uv_poll_start(read_watcher_, UV_READABLE, io_event);
+        start_rw_poll = false;
       }
 
       if (nlines < 0 || ncols < 0 || begin_y < 0 || begin_x < 0)
@@ -499,8 +505,8 @@ class Window : public ObjectWrap {
       else
         panel_ = new MyPanel(this, nlines, ncols, begin_y, begin_x);
 
-      if (firstRun) {
-        firstRun = false;
+      if (initialize_ACS) {
+        initialize_ACS = false;
 
         ACS_Chars = Persistent<Object>::New(Object::New());
         ACS_Chars->Set(String::New("ULCORNER"), Uint32::NewFromUnsigned(ACS_ULCORNER));
@@ -675,6 +681,9 @@ class Window : public ObjectWrap {
           uv_poll_stop(read_watcher_);
           uv_close((uv_handle_t *)read_watcher_, on_handle_close);
           Unref();
+          read_watcher_ = NULL;
+          stdin_fd = -1;
+          start_rw_poll = true;
         }
         delete panel_;
         panel_ = NULL;
@@ -1790,6 +1799,9 @@ class Window : public ObjectWrap {
     static Handle<Value> LeaveNcurses (const Arguments& args) {
       HandleScope scope;
 
+      uv_poll_stop(read_watcher_);
+      start_rw_poll = true;
+
       ::def_prog_mode();
       ::endwin();
 
@@ -1800,6 +1812,11 @@ class Window : public ObjectWrap {
       HandleScope scope;
 
       ::reset_prog_mode();
+      if (start_rw_poll) {
+        uv_poll_start(read_watcher_, UV_READABLE, io_event);
+        start_rw_poll = false;
+      }
+
       MyPanel::redraw();
 
       return Undefined();
