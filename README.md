@@ -36,7 +36,7 @@ node-ncurses exposes only one class: **Window**.
 
 ```javascript
       var nc = require('ncurses'),
-          win = new Window();
+          win = new nc.Window();
       win.hline(nc.cols, nc.ACS.DIAMOND);
 ```
 
