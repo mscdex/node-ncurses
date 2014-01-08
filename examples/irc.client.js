@@ -111,17 +111,13 @@ function setupWindow(win, conn) {
             window.top();
           nc.redraw();
       });
-	  } else if (i === nc.keys.BACKSPACE && win.curx > 0) {
-      var prev_x = win.curx-1;
-      win.delch(win.height-1, prev_x);
-      win.inbuffer = win.inbuffer.substring(0, prev_x) + win.inbuffer.substring(prev_x+1);
-      win.cursor(win.height-1, prev_x);
+    } else if (i === nc.keys.BACKSPACE && win.curx > 0) {
+      win.inbuffer = win.inbuffer.substring(0, win.curx - 1) + win.inbuffer.substring(win.curx);
+      win.delch(win.height-1, win.curx - 1);
       win.refresh();
     } else if (i === nc.keys.DEL) {
-      var prev_x = win.curx;
+      win.inbuffer = win.inbuffer.substring(0, win.curx) + win.inbuffer.substring(win.curx + 1);
       win.delch(win.height-1, win.curx);
-      win.inbuffer = win.inbuffer.substring(0, win.curx-1) + win.inbuffer.substring(win.curx);
-      win.cursor(win.height-1, prev_x);
       win.refresh();
     } else if (i === nc.keys.LEFT && win.curx > 0) {
       win.cursor(win.height-1, win.curx-1);
@@ -269,8 +265,16 @@ function setupWindow(win, conn) {
 	      win.refresh();
 	    }
 	  } else if (i >= 32 && i <= 126 && win.curx < win.width-1) {
-	    win.echochar(i);
-	    win.inbuffer += c;
+	    win.inbuffer = win.inbuffer.slice(0, win.curx) + c + win.inbuffer.slice(win.curx);
+
+	    if (win.curx < win.inbuffer.length) {
+	      win.insch(i);
+	      win.cursor(win.height - 1, win.curx + 1);
+	    } else {
+	      win.addch(i);
+	    }
+	    
+	    win.refresh();
 	  }
   });
   win.scrollok(true);
