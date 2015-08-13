@@ -4,7 +4,7 @@
   "description": "An ncurses binding for node.js",
   "main": "./index",
   "engines": { "node": ">=0.8.0" },
-  "dependencies": { "nan": "~1.8.4" },
+  "dependencies": { "nan": "^2.0.9" },
   "keywords": [ "console", "ncurses", "curses", "graphics" ],
   "licenses": [ { "type": "MIT", "url": "http://github.com/mscdex/node-ncurses/raw/master/LICENSE" } ],
   "repository": { "type": "git", "url": "http://github.com/mscdex/node-ncurses.git" }

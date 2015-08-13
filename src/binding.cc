@@ -23,7 +23,6 @@
 
 using namespace std;
 using namespace v8;
-using namespace node;
 
 class MyPanel;
 class Window;
@@ -41,42 +40,42 @@ typedef struct {
 static panel_node* head_panel = NULL;
 static MyPanel* topmost_panel = NULL;
 
-static Persistent<FunctionTemplate> window_constructor;
-static Persistent<String> emit_symbol;
-static Persistent<String> inputchar_symbol;
-static Persistent<String> echo_state_symbol;
-static Persistent<String> showcursor_state_symbol;
-static Persistent<String> lines_state_symbol;
-static Persistent<String> cols_state_symbol;
-static Persistent<String> tabsize_state_symbol;
-static Persistent<String> hasmouse_state_symbol;
-static Persistent<String> hascolors_state_symbol;
-static Persistent<String> numcolors_state_symbol;
-static Persistent<String> maxcolorpairs_state_symbol;
-static Persistent<String> raw_state_symbol;
-static Persistent<String> bkgd_state_symbol;
-static Persistent<String> hidden_state_symbol;
-static Persistent<String> height_state_symbol;
-static Persistent<String> width_state_symbol;
-static Persistent<String> begx_state_symbol;
-static Persistent<String> begy_state_symbol;
-static Persistent<String> curx_state_symbol;
-static Persistent<String> cury_state_symbol;
-static Persistent<String> maxx_state_symbol;
-static Persistent<String> maxy_state_symbol;
-static Persistent<String> wintouched_state_symbol;
-static Persistent<String> numwins_symbol;
-static Persistent<String> ACS_symbol;
-static Persistent<String> keys_symbol;
-static Persistent<String> colors_symbol;
-static Persistent<String> attrs_symbol;
-static Persistent<Object> ACS_Chars;
-static Persistent<Object> Keys;
-static Persistent<Object> Attrs;
-static Persistent<Object> Colors;
+static Nan::Persistent<FunctionTemplate> window_constructor;
+static Nan::Persistent<String> emit_symbol;
+static Nan::Persistent<String> inputchar_symbol;
+static Nan::Persistent<String> echo_state_symbol;
+static Nan::Persistent<String> showcursor_state_symbol;
+static Nan::Persistent<String> lines_state_symbol;
+static Nan::Persistent<String> cols_state_symbol;
+static Nan::Persistent<String> tabsize_state_symbol;
+static Nan::Persistent<String> hasmouse_state_symbol;
+static Nan::Persistent<String> hascolors_state_symbol;
+static Nan::Persistent<String> numcolors_state_symbol;
+static Nan::Persistent<String> maxcolorpairs_state_symbol;
+static Nan::Persistent<String> raw_state_symbol;
+static Nan::Persistent<String> bkgd_state_symbol;
+static Nan::Persistent<String> hidden_state_symbol;
+static Nan::Persistent<String> height_state_symbol;
+static Nan::Persistent<String> width_state_symbol;
+static Nan::Persistent<String> begx_state_symbol;
+static Nan::Persistent<String> begy_state_symbol;
+static Nan::Persistent<String> curx_state_symbol;
+static Nan::Persistent<String> cury_state_symbol;
+static Nan::Persistent<String> maxx_state_symbol;
+static Nan::Persistent<String> maxy_state_symbol;
+static Nan::Persistent<String> wintouched_state_symbol;
+static Nan::Persistent<String> numwins_symbol;
+static Nan::Persistent<String> ACS_symbol;
+static Nan::Persistent<String> keys_symbol;
+static Nan::Persistent<String> colors_symbol;
+static Nan::Persistent<String> attrs_symbol;
+static Nan::Persistent<Object> ACS_Chars;
+static Nan::Persistent<Object> Keys;
+static Nan::Persistent<Object> Attrs;
+static Nan::Persistent<Object> Colors;
 
-// Extracts a C string from a V8 Utf8Value.
-const char* ToCString(const v8::String::Utf8Value& value) {
+// Extracts a C string from a Nan Utf8String.
+const char* ToCString(const Nan::Utf8String& value) {
   return *value ? *value : "<string conversion failed>";
 }
 
@@ -304,172 +303,172 @@ bool MyPanel::echoInput_ = false;
 bool MyPanel::showCursor_ = true;
 bool MyPanel::isRaw_ = false;
 
-class Window : public ObjectWrap {
+class Window : public Nan::ObjectWrap {
   public:
-    Persistent<Function> Emit;
-    static void  Initialize (Handle<Object> target) {
-      NanScope();
+    Nan::Persistent<Function> Emit;
+    static NAN_MODULE_INIT(Initialize) {
+      Nan::HandleScope scope;
 
-      Local<FunctionTemplate> tpl = NanNew<FunctionTemplate>(New);
-      Local<String> name = NanNew("Window");
+      Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(New);
+      Local<String> name = Nan::New("Window").ToLocalChecked();
 
-      NanAssignPersistent(window_constructor, tpl);
+      window_constructor.Reset(tpl);
       tpl->InstanceTemplate()->SetInternalFieldCount(1);
       tpl->SetClassName(name);
 
-      NanAssignPersistent(emit_symbol, NanNew("emit"));
-      NanAssignPersistent(inputchar_symbol, NanNew("inputChar"));
-      NanAssignPersistent(echo_state_symbol, NanNew("echo"));
-      NanAssignPersistent(showcursor_state_symbol, NanNew("showCursor"));
-      NanAssignPersistent(lines_state_symbol, NanNew("lines"));
-      NanAssignPersistent(cols_state_symbol, NanNew("cols"));
-      NanAssignPersistent(tabsize_state_symbol, NanNew("tabsize"));
-      NanAssignPersistent(hasmouse_state_symbol, NanNew("hasMouse"));
-      NanAssignPersistent(hascolors_state_symbol, NanNew("hasColors"));
-      NanAssignPersistent(numcolors_state_symbol, NanNew("numColors"));
-      NanAssignPersistent(maxcolorpairs_state_symbol, NanNew("maxColorPairs"));
-      NanAssignPersistent(raw_state_symbol, NanNew("raw"));
-      NanAssignPersistent(bkgd_state_symbol, NanNew("bkgd"));
-      NanAssignPersistent(hidden_state_symbol, NanNew("hidden"));
-      NanAssignPersistent(height_state_symbol, NanNew("height"));
-      NanAssignPersistent(width_state_symbol, NanNew("width"));
-      NanAssignPersistent(begx_state_symbol, NanNew("begx"));
-      NanAssignPersistent(begy_state_symbol, NanNew("begy"));
-      NanAssignPersistent(curx_state_symbol, NanNew("curx"));
-      NanAssignPersistent(cury_state_symbol, NanNew("cury"));
-      NanAssignPersistent(maxx_state_symbol, NanNew("maxx"));
-      NanAssignPersistent(maxy_state_symbol, NanNew("maxy"));
-      NanAssignPersistent(wintouched_state_symbol, NanNew("touched"));
-      NanAssignPersistent(numwins_symbol, NanNew("numwins"));
-      NanAssignPersistent(ACS_symbol, NanNew("ACS"));
-      NanAssignPersistent(keys_symbol, NanNew("keys"));
-      NanAssignPersistent(colors_symbol, NanNew("colors"));
-      NanAssignPersistent(attrs_symbol, NanNew("attrs"));
+      emit_symbol.Reset(Nan::New("emit").ToLocalChecked());
+      inputchar_symbol.Reset(Nan::New("inputChar").ToLocalChecked());
+      echo_state_symbol.Reset(Nan::New("echo").ToLocalChecked());
+      showcursor_state_symbol.Reset(Nan::New("showCursor").ToLocalChecked());
+      lines_state_symbol.Reset(Nan::New("lines").ToLocalChecked());
+      cols_state_symbol.Reset(Nan::New("cols").ToLocalChecked());
+      tabsize_state_symbol.Reset(Nan::New("tabsize").ToLocalChecked());
+      hasmouse_state_symbol.Reset(Nan::New("hasMouse").ToLocalChecked());
+      hascolors_state_symbol.Reset(Nan::New("hasColors").ToLocalChecked());
+      numcolors_state_symbol.Reset(Nan::New("numColors").ToLocalChecked());
+      maxcolorpairs_state_symbol.Reset(Nan::New("maxColorPairs").ToLocalChecked());
+      raw_state_symbol.Reset(Nan::New("raw").ToLocalChecked());
+      bkgd_state_symbol.Reset(Nan::New("bkgd").ToLocalChecked());
+      hidden_state_symbol.Reset(Nan::New("hidden").ToLocalChecked());
+      height_state_symbol.Reset(Nan::New("height").ToLocalChecked());
+      width_state_symbol.Reset(Nan::New("width").ToLocalChecked());
+      begx_state_symbol.Reset(Nan::New("begx").ToLocalChecked());
+      begy_state_symbol.Reset(Nan::New("begy").ToLocalChecked());
+      curx_state_symbol.Reset(Nan::New("curx").ToLocalChecked());
+      cury_state_symbol.Reset(Nan::New("cury").ToLocalChecked());
+      maxx_state_symbol.Reset(Nan::New("maxx").ToLocalChecked());
+      maxy_state_symbol.Reset(Nan::New("maxy").ToLocalChecked());
+      wintouched_state_symbol.Reset(Nan::New("touched").ToLocalChecked());
+      numwins_symbol.Reset(Nan::New("numwins").ToLocalChecked());
+      ACS_symbol.Reset(Nan::New("ACS").ToLocalChecked());
+      keys_symbol.Reset(Nan::New("keys").ToLocalChecked());
+      colors_symbol.Reset(Nan::New("colors").ToLocalChecked());
+      attrs_symbol.Reset(Nan::New("attrs").ToLocalChecked());
 
       /* Panel-specific methods */
       // TODO: color_set?, overlay, overwrite
-      NODE_SET_PROTOTYPE_METHOD(tpl, "clearok", Clearok);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "scrollok", Scrollok);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "idlok", Idlok);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "idcok", Idcok);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "leaveok", Leaveok);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "syncok", Syncok);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "immedok", Immedok);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "keypad", Keypad);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "meta", Meta);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "standout", Standout);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "hide", Hide);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "show", Show);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "top", Top);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "bottom", Bottom);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "move", Mvwin);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "refresh", Refresh);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "noutrefresh", Noutrefresh);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "frame", Frame);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "boldframe", Boldframe);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "label", Label);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "centertext", Centertext);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "cursor", Move);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "insertln", Insertln);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "insdelln", Insdelln);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "insstr", Insstr);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "attron", Attron);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "attroff", Attroff);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "attrset", Attrset);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "attrget", Attrget);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "box", Box);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "border", Border);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "hline", Hline);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "vline", Vline);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "erase", Erase);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "clear", Clear);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "clrtobot", Clrtobot);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "clrtoeol", Clrtoeol);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "delch", Delch);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "deleteln", Deleteln);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "scroll", Scroll);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "setscrreg", Setscrreg);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "touchlines", Touchln);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "is_linetouched", Is_linetouched);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "redrawln", Redrawln);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "touch", Touchwin);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "untouch", Untouchwin);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "resize", Wresize);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "print", Print);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "addstr", Addstr);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "close", Close);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "syncdown", Syncdown);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "syncup", Syncup);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "cursyncup", Cursyncup);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "copywin", Copywin);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "redraw", Redrawwin);
+      Nan::SetPrototypeMethod(tpl, "clearok", Clearok);
+      Nan::SetPrototypeMethod(tpl, "scrollok", Scrollok);
+      Nan::SetPrototypeMethod(tpl, "idlok", Idlok);
+      Nan::SetPrototypeMethod(tpl, "idcok", Idcok);
+      Nan::SetPrototypeMethod(tpl, "leaveok", Leaveok);
+      Nan::SetPrototypeMethod(tpl, "syncok", Syncok);
+      Nan::SetPrototypeMethod(tpl, "immedok", Immedok);
+      Nan::SetPrototypeMethod(tpl, "keypad", Keypad);
+      Nan::SetPrototypeMethod(tpl, "meta", Meta);
+      Nan::SetPrototypeMethod(tpl, "standout", Standout);
+      Nan::SetPrototypeMethod(tpl, "hide", Hide);
+      Nan::SetPrototypeMethod(tpl, "show", Show);
+      Nan::SetPrototypeMethod(tpl, "top", Top);
+      Nan::SetPrototypeMethod(tpl, "bottom", Bottom);
+      Nan::SetPrototypeMethod(tpl, "move", Mvwin);
+      Nan::SetPrototypeMethod(tpl, "refresh", Refresh);
+      Nan::SetPrototypeMethod(tpl, "noutrefresh", Noutrefresh);
+      Nan::SetPrototypeMethod(tpl, "frame", Frame);
+      Nan::SetPrototypeMethod(tpl, "boldframe", Boldframe);
+      Nan::SetPrototypeMethod(tpl, "label", Label);
+      Nan::SetPrototypeMethod(tpl, "centertext", Centertext);
+      Nan::SetPrototypeMethod(tpl, "cursor", Move);
+      Nan::SetPrototypeMethod(tpl, "insertln", Insertln);
+      Nan::SetPrototypeMethod(tpl, "insdelln", Insdelln);
+      Nan::SetPrototypeMethod(tpl, "insstr", Insstr);
+      Nan::SetPrototypeMethod(tpl, "attron", Attron);
+      Nan::SetPrototypeMethod(tpl, "attroff", Attroff);
+      Nan::SetPrototypeMethod(tpl, "attrset", Attrset);
+      Nan::SetPrototypeMethod(tpl, "attrget", Attrget);
+      Nan::SetPrototypeMethod(tpl, "box", Box);
+      Nan::SetPrototypeMethod(tpl, "border", Border);
+      Nan::SetPrototypeMethod(tpl, "hline", Hline);
+      Nan::SetPrototypeMethod(tpl, "vline", Vline);
+      Nan::SetPrototypeMethod(tpl, "erase", Erase);
+      Nan::SetPrototypeMethod(tpl, "clear", Clear);
+      Nan::SetPrototypeMethod(tpl, "clrtobot", Clrtobot);
+      Nan::SetPrototypeMethod(tpl, "clrtoeol", Clrtoeol);
+      Nan::SetPrototypeMethod(tpl, "delch", Delch);
+      Nan::SetPrototypeMethod(tpl, "deleteln", Deleteln);
+      Nan::SetPrototypeMethod(tpl, "scroll", Scroll);
+      Nan::SetPrototypeMethod(tpl, "setscrreg", Setscrreg);
+      Nan::SetPrototypeMethod(tpl, "touchlines", Touchln);
+      Nan::SetPrototypeMethod(tpl, "is_linetouched", Is_linetouched);
+      Nan::SetPrototypeMethod(tpl, "redrawln", Redrawln);
+      Nan::SetPrototypeMethod(tpl, "touch", Touchwin);
+      Nan::SetPrototypeMethod(tpl, "untouch", Untouchwin);
+      Nan::SetPrototypeMethod(tpl, "resize", Wresize);
+      Nan::SetPrototypeMethod(tpl, "print", Print);
+      Nan::SetPrototypeMethod(tpl, "addstr", Addstr);
+      Nan::SetPrototypeMethod(tpl, "close", Close);
+      Nan::SetPrototypeMethod(tpl, "syncdown", Syncdown);
+      Nan::SetPrototypeMethod(tpl, "syncup", Syncup);
+      Nan::SetPrototypeMethod(tpl, "cursyncup", Cursyncup);
+      Nan::SetPrototypeMethod(tpl, "copywin", Copywin);
+      Nan::SetPrototypeMethod(tpl, "redraw", Redrawwin);
 
       /* Attribute-related window functions */
-      NODE_SET_PROTOTYPE_METHOD(tpl, "addch", Addch);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "echochar", Echochar);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "inch", Inch);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "insch", Insch);
-      NODE_SET_PROTOTYPE_METHOD(tpl, "chgat", Chgat);
-      //NODE_SET_PROTOTYPE_METHOD(tpl, "addchstr", Addchstr);
-      //NODE_SET_PROTOTYPE_METHOD(tpl, "inchstr", Inchstr);
+      Nan::SetPrototypeMethod(tpl, "addch", Addch);
+      Nan::SetPrototypeMethod(tpl, "echochar", Echochar);
+      Nan::SetPrototypeMethod(tpl, "inch", Inch);
+      Nan::SetPrototypeMethod(tpl, "insch", Insch);
+      Nan::SetPrototypeMethod(tpl, "chgat", Chgat);
+      //Nan::SetPrototypeMethod(tpl, "addchstr", Addchstr);
+      //Nan::SetPrototypeMethod(tpl, "inchstr", Inchstr);
 
       /* Window properties */
-      tpl->PrototypeTemplate()->SetAccessor(NanNew(bkgd_state_symbol),
+      Nan::SetAccessor(tpl->PrototypeTemplate(), Nan::New(bkgd_state_symbol),
                                                            BkgdStateGetter,
                                                            BkgdStateSetter);
-      tpl->PrototypeTemplate()->SetAccessor(NanNew(hidden_state_symbol),
+      Nan::SetAccessor(tpl->PrototypeTemplate(), Nan::New(hidden_state_symbol),
                                                            HiddenStateGetter);
-      tpl->PrototypeTemplate()->SetAccessor(NanNew(height_state_symbol),
+      Nan::SetAccessor(tpl->PrototypeTemplate(), Nan::New(height_state_symbol),
                                                            HeightStateGetter);
-      tpl->PrototypeTemplate()->SetAccessor(NanNew(width_state_symbol),
+      Nan::SetAccessor(tpl->PrototypeTemplate(), Nan::New(width_state_symbol),
                                                            WidthStateGetter);
-      tpl->PrototypeTemplate()->SetAccessor(NanNew(begx_state_symbol),
+      Nan::SetAccessor(tpl->PrototypeTemplate(), Nan::New(begx_state_symbol),
                                                            BegxStateGetter);
-      tpl->PrototypeTemplate()->SetAccessor(NanNew(begy_state_symbol),
+      Nan::SetAccessor(tpl->PrototypeTemplate(), Nan::New(begy_state_symbol),
                                                            BegyStateGetter);
-      tpl->PrototypeTemplate()->SetAccessor(NanNew(curx_state_symbol),
+      Nan::SetAccessor(tpl->PrototypeTemplate(), Nan::New(curx_state_symbol),
                                                            CurxStateGetter);
-      tpl->PrototypeTemplate()->SetAccessor(NanNew(cury_state_symbol),
+      Nan::SetAccessor(tpl->PrototypeTemplate(), Nan::New(cury_state_symbol),
                                                            CuryStateGetter);
-      tpl->PrototypeTemplate()->SetAccessor(NanNew(maxx_state_symbol),
+      Nan::SetAccessor(tpl->PrototypeTemplate(), Nan::New(maxx_state_symbol),
                                                            MaxxStateGetter);
-      tpl->PrototypeTemplate()->SetAccessor(NanNew(maxy_state_symbol),
+      Nan::SetAccessor(tpl->PrototypeTemplate(), Nan::New(maxy_state_symbol),
                                                            MaxyStateGetter);
-      tpl->PrototypeTemplate()->SetAccessor(NanNew(wintouched_state_symbol),
+      Nan::SetAccessor(tpl->PrototypeTemplate(), Nan::New(wintouched_state_symbol),
                                                            WintouchedStateGetter);
 
       /* Global/Terminal properties and functions */
-      target->SetAccessor(NanNew(echo_state_symbol), EchoStateGetter, EchoStateSetter);
-      target->SetAccessor(NanNew(showcursor_state_symbol), ShowcursorStateGetter,
+      Nan::SetAccessor(target, Nan::New(echo_state_symbol), EchoStateGetter, EchoStateSetter);
+      Nan::SetAccessor(target, Nan::New(showcursor_state_symbol), ShowcursorStateGetter,
                           ShowcursorStateSetter);
-      target->SetAccessor(NanNew(lines_state_symbol), LinesStateGetter);
-      target->SetAccessor(NanNew(cols_state_symbol), ColsStateGetter);
-      target->SetAccessor(NanNew(tabsize_state_symbol), TabsizeStateGetter);
-      target->SetAccessor(NanNew(hasmouse_state_symbol), HasmouseStateGetter);
-      target->SetAccessor(NanNew(hascolors_state_symbol), HascolorsStateGetter);
-      target->SetAccessor(NanNew(numcolors_state_symbol), NumcolorsStateGetter);
-      target->SetAccessor(NanNew(maxcolorpairs_state_symbol), MaxcolorpairsStateGetter);
-      target->SetAccessor(NanNew(raw_state_symbol), RawStateGetter, RawStateSetter);
-      target->SetAccessor(NanNew(numwins_symbol), NumwinsGetter);
-      target->SetAccessor(NanNew(ACS_symbol), ACSConstsGetter);
-      target->SetAccessor(NanNew(keys_symbol), KeyConstsGetter);
-      target->SetAccessor(NanNew(colors_symbol), ColorConstsGetter);
-      target->SetAccessor(NanNew(attrs_symbol), AttrConstsGetter);
-      NODE_SET_METHOD(target, "setEscDelay", Setescdelay);
-      NODE_SET_METHOD(target, "cleanup", Resetscreen);
-      NODE_SET_METHOD(target, "redraw", Redraw);
-      NODE_SET_METHOD(target, "leave", LeaveNcurses);
-      NODE_SET_METHOD(target, "restore", RestoreNcurses);
-      NODE_SET_METHOD(target, "beep", Beep);
-      NODE_SET_METHOD(target, "flash", Flash);
-      NODE_SET_METHOD(target, "doupdate", DoUpdate);
-      NODE_SET_METHOD(target, "colorPair", Colorpair);
-      NODE_SET_METHOD(target, "colorFg", Colorfg);
-      NODE_SET_METHOD(target, "colorBg", Colorbg);
-      NODE_SET_METHOD(target, "dup2", Dup2);
-      NODE_SET_METHOD(target, "dup", Dup);
+      Nan::SetAccessor(target, Nan::New(lines_state_symbol), LinesStateGetter);
+      Nan::SetAccessor(target, Nan::New(cols_state_symbol), ColsStateGetter);
+      Nan::SetAccessor(target, Nan::New(tabsize_state_symbol), TabsizeStateGetter);
+      Nan::SetAccessor(target, Nan::New(hasmouse_state_symbol), HasmouseStateGetter);
+      Nan::SetAccessor(target, Nan::New(hascolors_state_symbol), HascolorsStateGetter);
+      Nan::SetAccessor(target, Nan::New(numcolors_state_symbol), NumcolorsStateGetter);
+      Nan::SetAccessor(target, Nan::New(maxcolorpairs_state_symbol), MaxcolorpairsStateGetter);
+      Nan::SetAccessor(target, Nan::New(raw_state_symbol), RawStateGetter, RawStateSetter);
+      Nan::SetAccessor(target, Nan::New(numwins_symbol), NumwinsGetter);
+      Nan::SetAccessor(target, Nan::New(ACS_symbol), ACSConstsGetter);
+      Nan::SetAccessor(target, Nan::New(keys_symbol), KeyConstsGetter);
+      Nan::SetAccessor(target, Nan::New(colors_symbol), ColorConstsGetter);
+      Nan::SetAccessor(target, Nan::New(attrs_symbol), AttrConstsGetter);
+      Nan::SetMethod(target, "setEscDelay", Setescdelay);
+      Nan::SetMethod(target, "cleanup", Resetscreen);
+      Nan::SetMethod(target, "redraw", Redraw);
+      Nan::SetMethod(target, "leave", LeaveNcurses);
+      Nan::SetMethod(target, "restore", RestoreNcurses);
+      Nan::SetMethod(target, "beep", Beep);
+      Nan::SetMethod(target, "flash", Flash);
+      Nan::SetMethod(target, "doupdate", DoUpdate);
+      Nan::SetMethod(target, "colorPair", Colorpair);
+      Nan::SetMethod(target, "colorFg", Colorfg);
+      Nan::SetMethod(target, "colorBg", Colorbg);
+      Nan::SetMethod(target, "dup2", Dup2);
+      Nan::SetMethod(target, "dup", Dup);
 
-      target->Set(name, tpl->GetFunction());
+      Nan::Set(target, name, Nan::GetFunction(tpl).ToLocalChecked());
     }
 
     void init(int nlines=-1, int ncols=-1, int begin_y=-1, int begin_x=-1) {
@@ -479,7 +478,7 @@ class Window : public ObjectWrap {
         int stdin_flags = fcntl(stdin_fd, F_GETFL, 0);
         int r = fcntl(stdin_fd, F_SETFL, stdin_flags | O_NONBLOCK);
         if (r < 0) {
-          NanThrowError("Unable to set stdin to non-block");
+          Nan::ThrowError("Unable to set stdin to non-block");
           return;
         }
       }
@@ -505,165 +504,165 @@ class Window : public ObjectWrap {
       if (initialize_ACS) {
         initialize_ACS = false;
 
-        Local<Object> obj = NanNew<Object>();
-        obj->Set(NanNew("ULCORNER"), NanNew<Uint32>(ACS_ULCORNER));
-        obj->Set(NanNew("LLCORNER"), NanNew<Uint32>(ACS_LLCORNER));
-        obj->Set(NanNew("URCORNER"), NanNew<Uint32>(ACS_URCORNER));
-        obj->Set(NanNew("LRCORNER"), NanNew<Uint32>(ACS_LRCORNER));
-        obj->Set(NanNew("LTEE"), NanNew<Uint32>(ACS_LTEE));
-        obj->Set(NanNew("RTEE"), NanNew<Uint32>(ACS_RTEE));
-        obj->Set(NanNew("BTEE"), NanNew<Uint32>(ACS_BTEE));
-        obj->Set(NanNew("TTEE"), NanNew<Uint32>(ACS_TTEE));
-        obj->Set(NanNew("HLINE"), NanNew<Uint32>(ACS_HLINE));
-        obj->Set(NanNew("VLINE"), NanNew<Uint32>(ACS_VLINE));
-        obj->Set(NanNew("PLUS"), NanNew<Uint32>(ACS_PLUS));
-        obj->Set(NanNew("S1"), NanNew<Uint32>(ACS_S1));
-        obj->Set(NanNew("S9"), NanNew<Uint32>(ACS_S9));
-        obj->Set(NanNew("DIAMOND"), NanNew<Uint32>(ACS_DIAMOND));
-        obj->Set(NanNew("CKBOARD"), NanNew<Uint32>(ACS_CKBOARD));
-        obj->Set(NanNew("DEGREE"), NanNew<Uint32>(ACS_DEGREE));
-        obj->Set(NanNew("PLMINUS"), NanNew<Uint32>(ACS_PLMINUS));
-        obj->Set(NanNew("BULLET"), NanNew<Uint32>(ACS_BULLET));
-        obj->Set(NanNew("LARROW"), NanNew<Uint32>(ACS_LARROW));
-        obj->Set(NanNew("RARROW"), NanNew<Uint32>(ACS_RARROW));
-        obj->Set(NanNew("DARROW"), NanNew<Uint32>(ACS_DARROW));
-        obj->Set(NanNew("UARROW"), NanNew<Uint32>(ACS_UARROW));
-        obj->Set(NanNew("BOARD"), NanNew<Uint32>(ACS_BOARD));
-        obj->Set(NanNew("LANTERN"), NanNew<Uint32>(ACS_LANTERN));
-        obj->Set(NanNew("BLOCK"), NanNew<Uint32>(ACS_BLOCK));
-        NanAssignPersistent(ACS_Chars, obj);
+        Local<Object> obj = Nan::New<Object>();
+        Nan::Set(obj, Nan::New("ULCORNER").ToLocalChecked(), Nan::New<Uint32>(ACS_ULCORNER));
+        Nan::Set(obj, Nan::New("LLCORNER").ToLocalChecked(), Nan::New<Uint32>(ACS_LLCORNER));
+        Nan::Set(obj, Nan::New("URCORNER").ToLocalChecked(), Nan::New<Uint32>(ACS_URCORNER));
+        Nan::Set(obj, Nan::New("LRCORNER").ToLocalChecked(), Nan::New<Uint32>(ACS_LRCORNER));
+        Nan::Set(obj, Nan::New("LTEE").ToLocalChecked(), Nan::New<Uint32>(ACS_LTEE));
+        Nan::Set(obj, Nan::New("RTEE").ToLocalChecked(), Nan::New<Uint32>(ACS_RTEE));
+        Nan::Set(obj, Nan::New("BTEE").ToLocalChecked(), Nan::New<Uint32>(ACS_BTEE));
+        Nan::Set(obj, Nan::New("TTEE").ToLocalChecked(), Nan::New<Uint32>(ACS_TTEE));
+        Nan::Set(obj, Nan::New("HLINE").ToLocalChecked(), Nan::New<Uint32>(ACS_HLINE));
+        Nan::Set(obj, Nan::New("VLINE").ToLocalChecked(), Nan::New<Uint32>(ACS_VLINE));
+        Nan::Set(obj, Nan::New("PLUS").ToLocalChecked(), Nan::New<Uint32>(ACS_PLUS));
+        Nan::Set(obj, Nan::New("S1").ToLocalChecked(), Nan::New<Uint32>(ACS_S1));
+        Nan::Set(obj, Nan::New("S9").ToLocalChecked(), Nan::New<Uint32>(ACS_S9));
+        Nan::Set(obj, Nan::New("DIAMOND").ToLocalChecked(), Nan::New<Uint32>(ACS_DIAMOND));
+        Nan::Set(obj, Nan::New("CKBOARD").ToLocalChecked(), Nan::New<Uint32>(ACS_CKBOARD));
+        Nan::Set(obj, Nan::New("DEGREE").ToLocalChecked(), Nan::New<Uint32>(ACS_DEGREE));
+        Nan::Set(obj, Nan::New("PLMINUS").ToLocalChecked(), Nan::New<Uint32>(ACS_PLMINUS));
+        Nan::Set(obj, Nan::New("BULLET").ToLocalChecked(), Nan::New<Uint32>(ACS_BULLET));
+        Nan::Set(obj, Nan::New("LARROW").ToLocalChecked(), Nan::New<Uint32>(ACS_LARROW));
+        Nan::Set(obj, Nan::New("RARROW").ToLocalChecked(), Nan::New<Uint32>(ACS_RARROW));
+        Nan::Set(obj, Nan::New("DARROW").ToLocalChecked(), Nan::New<Uint32>(ACS_DARROW));
+        Nan::Set(obj, Nan::New("UARROW").ToLocalChecked(), Nan::New<Uint32>(ACS_UARROW));
+        Nan::Set(obj, Nan::New("BOARD").ToLocalChecked(), Nan::New<Uint32>(ACS_BOARD));
+        Nan::Set(obj, Nan::New("LANTERN").ToLocalChecked(), Nan::New<Uint32>(ACS_LANTERN));
+        Nan::Set(obj, Nan::New("BLOCK").ToLocalChecked(), Nan::New<Uint32>(ACS_BLOCK));
+        ACS_Chars.Reset(obj);
 
-        obj = NanNew<Object>();
-        obj->Set(NanNew("SPACE"), NanNew<Uint32>(32));
-        obj->Set(NanNew("NEWLINE"), NanNew<Uint32>(10));
-        obj->Set(NanNew("ESC"), NanNew<Uint32>(27));
-        obj->Set(NanNew("UP"), NanNew<Uint32>(KEY_UP));
-        obj->Set(NanNew("DOWN"), NanNew<Uint32>(KEY_DOWN));
-        obj->Set(NanNew("LEFT"), NanNew<Uint32>(KEY_LEFT));
-        obj->Set(NanNew("RIGHT"), NanNew<Uint32>(KEY_RIGHT));
-        obj->Set(NanNew("HOME"), NanNew<Uint32>(KEY_HOME));
-        obj->Set(NanNew("BACKSPACE"), NanNew<Uint32>(KEY_BACKSPACE));
-        obj->Set(NanNew("BREAK"), NanNew<Uint32>(KEY_BREAK));
-        obj->Set(NanNew("F0"), NanNew<Uint32>(KEY_F(0)));
-        obj->Set(NanNew("F1"), NanNew<Uint32>(KEY_F(1)));
-        obj->Set(NanNew("F2"), NanNew<Uint32>(KEY_F(2)));
-        obj->Set(NanNew("F3"), NanNew<Uint32>(KEY_F(3)));
-        obj->Set(NanNew("F4"), NanNew<Uint32>(KEY_F(4)));
-        obj->Set(NanNew("F5"), NanNew<Uint32>(KEY_F(5)));
-        obj->Set(NanNew("F6"), NanNew<Uint32>(KEY_F(6)));
-        obj->Set(NanNew("F7"), NanNew<Uint32>(KEY_F(7)));
-        obj->Set(NanNew("F8"), NanNew<Uint32>(KEY_F(8)));
-        obj->Set(NanNew("F9"), NanNew<Uint32>(KEY_F(9)));
-        obj->Set(NanNew("F10"), NanNew<Uint32>(KEY_F(10)));
-        obj->Set(NanNew("F11"), NanNew<Uint32>(KEY_F(11)));
-        obj->Set(NanNew("F12"), NanNew<Uint32>(KEY_F(12)));
-        obj->Set(NanNew("DL"), NanNew<Uint32>(KEY_DL));
-        obj->Set(NanNew("IL"), NanNew<Uint32>(KEY_IL));
-        obj->Set(NanNew("DEL"), NanNew<Uint32>(KEY_DC));
-        obj->Set(NanNew("INS"), NanNew<Uint32>(KEY_IC));
-        obj->Set(NanNew("EIC"), NanNew<Uint32>(KEY_EIC));
-        obj->Set(NanNew("CLEAR"), NanNew<Uint32>(KEY_CLEAR));
-        obj->Set(NanNew("EOS"), NanNew<Uint32>(KEY_EOS));
-        obj->Set(NanNew("EOL"), NanNew<Uint32>(KEY_EOL));
-        obj->Set(NanNew("SF"), NanNew<Uint32>(KEY_SF));
-        obj->Set(NanNew("SR"), NanNew<Uint32>(KEY_SR));
-        obj->Set(NanNew("NPAGE"), NanNew<Uint32>(KEY_NPAGE));
-        obj->Set(NanNew("PPAGE"), NanNew<Uint32>(KEY_PPAGE));
-        obj->Set(NanNew("STAB"), NanNew<Uint32>(KEY_STAB));
-        obj->Set(NanNew("CTAB"), NanNew<Uint32>(KEY_CTAB));
-        obj->Set(NanNew("CATAB"), NanNew<Uint32>(KEY_CATAB));
-        obj->Set(NanNew("ENTER"), NanNew<Uint32>(KEY_ENTER));
-        obj->Set(NanNew("SRESET"), NanNew<Uint32>(KEY_SRESET));
-        obj->Set(NanNew("RESET"), NanNew<Uint32>(KEY_RESET));
-        obj->Set(NanNew("PRINT"), NanNew<Uint32>(KEY_PRINT));
-        obj->Set(NanNew("LL"), NanNew<Uint32>(KEY_LL));
-        obj->Set(NanNew("UPLEFT"), NanNew<Uint32>(KEY_A1));
-        obj->Set(NanNew("UPRIGHT"), NanNew<Uint32>(KEY_A3));
-        obj->Set(NanNew("CENTER"), NanNew<Uint32>(KEY_B2));
-        obj->Set(NanNew("DOWNLEFT"), NanNew<Uint32>(KEY_C1));
-        obj->Set(NanNew("DOWNRIGHT"), NanNew<Uint32>(KEY_C3));
-        obj->Set(NanNew("BTAB"), NanNew<Uint32>(KEY_BTAB));
-        obj->Set(NanNew("BEG"), NanNew<Uint32>(KEY_BEG));
-        obj->Set(NanNew("CANCEL"), NanNew<Uint32>(KEY_CANCEL));
-        obj->Set(NanNew("CLOSE"), NanNew<Uint32>(KEY_CLOSE));
-        obj->Set(NanNew("COMMAND"), NanNew<Uint32>(KEY_COMMAND));
-        obj->Set(NanNew("COPY"), NanNew<Uint32>(KEY_COPY));
-        obj->Set(NanNew("CREATE"), NanNew<Uint32>(KEY_CREATE));
-        obj->Set(NanNew("END"), NanNew<Uint32>(KEY_END));
-        obj->Set(NanNew("EXIT"), NanNew<Uint32>(KEY_EXIT));
-        obj->Set(NanNew("FIND"), NanNew<Uint32>(KEY_FIND));
-        obj->Set(NanNew("FIND"), NanNew<Uint32>(KEY_HELP));
-        obj->Set(NanNew("MARK"), NanNew<Uint32>(KEY_MARK));
-        obj->Set(NanNew("MESSAGE"), NanNew<Uint32>(KEY_MESSAGE));
-        obj->Set(NanNew("MOVE"), NanNew<Uint32>(KEY_MOVE));
-        obj->Set(NanNew("NEXT"), NanNew<Uint32>(KEY_NEXT));
-        obj->Set(NanNew("OPEN"), NanNew<Uint32>(KEY_OPEN));
-        obj->Set(NanNew("OPTIONS"), NanNew<Uint32>(KEY_OPTIONS));
-        obj->Set(NanNew("PREVIOUS"), NanNew<Uint32>(KEY_PREVIOUS));
-        obj->Set(NanNew("REDO"), NanNew<Uint32>(KEY_REDO));
-        obj->Set(NanNew("REFERENCE"), NanNew<Uint32>(KEY_REFERENCE));
-        obj->Set(NanNew("REFRESH"), NanNew<Uint32>(KEY_REFRESH));
-        obj->Set(NanNew("REPLACE"), NanNew<Uint32>(KEY_REPLACE));
-        obj->Set(NanNew("RESTART"), NanNew<Uint32>(KEY_RESTART));
-        obj->Set(NanNew("RESUME"), NanNew<Uint32>(KEY_RESUME));
-        obj->Set(NanNew("SAVE"), NanNew<Uint32>(KEY_SAVE));
-        obj->Set(NanNew("S_BEG"), NanNew<Uint32>(KEY_SBEG));
-        obj->Set(NanNew("S_CANCEL"), NanNew<Uint32>(KEY_SCANCEL));
-        obj->Set(NanNew("S_COMMAND"), NanNew<Uint32>(KEY_SCOMMAND));
-        obj->Set(NanNew("S_COPY"), NanNew<Uint32>(KEY_SCOPY));
-        obj->Set(NanNew("S_CREATE"), NanNew<Uint32>(KEY_SCREATE));
-        obj->Set(NanNew("S_DC"), NanNew<Uint32>(KEY_SDC));
-        obj->Set(NanNew("S_DL"), NanNew<Uint32>(KEY_SDL));
-        obj->Set(NanNew("SELECT"), NanNew<Uint32>(KEY_SELECT));
-        obj->Set(NanNew("SEND"), NanNew<Uint32>(KEY_SEND));
-        obj->Set(NanNew("S_EOL"), NanNew<Uint32>(KEY_SEOL));
-        obj->Set(NanNew("S_EXIT"), NanNew<Uint32>(KEY_SEXIT));
-        obj->Set(NanNew("S_FIND"), NanNew<Uint32>(KEY_SFIND));
-        obj->Set(NanNew("S_HELP"), NanNew<Uint32>(KEY_SHELP));
-        obj->Set(NanNew("S_HOME"), NanNew<Uint32>(KEY_SHOME));
-        obj->Set(NanNew("S_IC"), NanNew<Uint32>(KEY_SIC));
-        obj->Set(NanNew("S_LEFT"), NanNew<Uint32>(KEY_SLEFT));
-        obj->Set(NanNew("S_MESSAGE"), NanNew<Uint32>(KEY_SMESSAGE));
-        obj->Set(NanNew("S_MOVE"), NanNew<Uint32>(KEY_SMOVE));
-        obj->Set(NanNew("S_NEXT"), NanNew<Uint32>(KEY_SNEXT));
-        obj->Set(NanNew("S_OPTIONS"), NanNew<Uint32>(KEY_SOPTIONS));
-        obj->Set(NanNew("S_PREVIOUS"), NanNew<Uint32>(KEY_SPREVIOUS));
-        obj->Set(NanNew("S_PRINT"), NanNew<Uint32>(KEY_SPRINT));
-        obj->Set(NanNew("S_REDO"), NanNew<Uint32>(KEY_SREDO));
-        obj->Set(NanNew("S_REPLACE"), NanNew<Uint32>(KEY_SREPLACE));
-        obj->Set(NanNew("S_RIGHT"), NanNew<Uint32>(KEY_SRIGHT));
-        obj->Set(NanNew("S_RESUME"), NanNew<Uint32>(KEY_SRSUME));
-        obj->Set(NanNew("S_SAVE"), NanNew<Uint32>(KEY_SSAVE));
-        obj->Set(NanNew("S_SUSPEND"), NanNew<Uint32>(KEY_SSUSPEND));
-        obj->Set(NanNew("S_UNDO"), NanNew<Uint32>(KEY_SUNDO));
-        obj->Set(NanNew("SUSPEND"), NanNew<Uint32>(KEY_SUSPEND));
-        obj->Set(NanNew("UNDO"), NanNew<Uint32>(KEY_UNDO));
-        obj->Set(NanNew("MOUSE"), NanNew<Uint32>(KEY_MOUSE));
-        obj->Set(NanNew("RESIZE"), NanNew<Uint32>(KEY_RESIZE));
-        NanAssignPersistent(Keys, obj);
+        obj = Nan::New<Object>();
+        Nan::Set(obj, Nan::New("SPACE").ToLocalChecked(), Nan::New<Uint32>(32));
+        Nan::Set(obj, Nan::New("NEWLINE").ToLocalChecked(), Nan::New<Uint32>(10));
+        Nan::Set(obj, Nan::New("ESC").ToLocalChecked(), Nan::New<Uint32>(27));
+        Nan::Set(obj, Nan::New("UP").ToLocalChecked(), Nan::New<Uint32>(KEY_UP));
+        Nan::Set(obj, Nan::New("DOWN").ToLocalChecked(), Nan::New<Uint32>(KEY_DOWN));
+        Nan::Set(obj, Nan::New("LEFT").ToLocalChecked(), Nan::New<Uint32>(KEY_LEFT));
+        Nan::Set(obj, Nan::New("RIGHT").ToLocalChecked(), Nan::New<Uint32>(KEY_RIGHT));
+        Nan::Set(obj, Nan::New("HOME").ToLocalChecked(), Nan::New<Uint32>(KEY_HOME));
+        Nan::Set(obj, Nan::New("BACKSPACE").ToLocalChecked(), Nan::New<Uint32>(KEY_BACKSPACE));
+        Nan::Set(obj, Nan::New("BREAK").ToLocalChecked(), Nan::New<Uint32>(KEY_BREAK));
+        Nan::Set(obj, Nan::New("F0").ToLocalChecked(), Nan::New<Uint32>(KEY_F(0)));
+        Nan::Set(obj, Nan::New("F1").ToLocalChecked(), Nan::New<Uint32>(KEY_F(1)));
+        Nan::Set(obj, Nan::New("F2").ToLocalChecked(), Nan::New<Uint32>(KEY_F(2)));
+        Nan::Set(obj, Nan::New("F3").ToLocalChecked(), Nan::New<Uint32>(KEY_F(3)));
+        Nan::Set(obj, Nan::New("F4").ToLocalChecked(), Nan::New<Uint32>(KEY_F(4)));
+        Nan::Set(obj, Nan::New("F5").ToLocalChecked(), Nan::New<Uint32>(KEY_F(5)));
+        Nan::Set(obj, Nan::New("F6").ToLocalChecked(), Nan::New<Uint32>(KEY_F(6)));
+        Nan::Set(obj, Nan::New("F7").ToLocalChecked(), Nan::New<Uint32>(KEY_F(7)));
+        Nan::Set(obj, Nan::New("F8").ToLocalChecked(), Nan::New<Uint32>(KEY_F(8)));
+        Nan::Set(obj, Nan::New("F9").ToLocalChecked(), Nan::New<Uint32>(KEY_F(9)));
+        Nan::Set(obj, Nan::New("F10").ToLocalChecked(), Nan::New<Uint32>(KEY_F(10)));
+        Nan::Set(obj, Nan::New("F11").ToLocalChecked(), Nan::New<Uint32>(KEY_F(11)));
+        Nan::Set(obj, Nan::New("F12").ToLocalChecked(), Nan::New<Uint32>(KEY_F(12)));
+        Nan::Set(obj, Nan::New("DL").ToLocalChecked(), Nan::New<Uint32>(KEY_DL));
+        Nan::Set(obj, Nan::New("IL").ToLocalChecked(), Nan::New<Uint32>(KEY_IL));
+        Nan::Set(obj, Nan::New("DEL").ToLocalChecked(), Nan::New<Uint32>(KEY_DC));
+        Nan::Set(obj, Nan::New("INS").ToLocalChecked(), Nan::New<Uint32>(KEY_IC));
+        Nan::Set(obj, Nan::New("EIC").ToLocalChecked(), Nan::New<Uint32>(KEY_EIC));
+        Nan::Set(obj, Nan::New("CLEAR").ToLocalChecked(), Nan::New<Uint32>(KEY_CLEAR));
+        Nan::Set(obj, Nan::New("EOS").ToLocalChecked(), Nan::New<Uint32>(KEY_EOS));
+        Nan::Set(obj, Nan::New("EOL").ToLocalChecked(), Nan::New<Uint32>(KEY_EOL));
+        Nan::Set(obj, Nan::New("SF").ToLocalChecked(), Nan::New<Uint32>(KEY_SF));
+        Nan::Set(obj, Nan::New("SR").ToLocalChecked(), Nan::New<Uint32>(KEY_SR));
+        Nan::Set(obj, Nan::New("NPAGE").ToLocalChecked(), Nan::New<Uint32>(KEY_NPAGE));
+        Nan::Set(obj, Nan::New("PPAGE").ToLocalChecked(), Nan::New<Uint32>(KEY_PPAGE));
+        Nan::Set(obj, Nan::New("STAB").ToLocalChecked(), Nan::New<Uint32>(KEY_STAB));
+        Nan::Set(obj, Nan::New("CTAB").ToLocalChecked(), Nan::New<Uint32>(KEY_CTAB));
+        Nan::Set(obj, Nan::New("CATAB").ToLocalChecked(), Nan::New<Uint32>(KEY_CATAB));
+        Nan::Set(obj, Nan::New("ENTER").ToLocalChecked(), Nan::New<Uint32>(KEY_ENTER));
+        Nan::Set(obj, Nan::New("SRESET").ToLocalChecked(), Nan::New<Uint32>(KEY_SRESET));
+        Nan::Set(obj, Nan::New("RESET").ToLocalChecked(), Nan::New<Uint32>(KEY_RESET));
+        Nan::Set(obj, Nan::New("PRINT").ToLocalChecked(), Nan::New<Uint32>(KEY_PRINT));
+        Nan::Set(obj, Nan::New("LL").ToLocalChecked(), Nan::New<Uint32>(KEY_LL));
+        Nan::Set(obj, Nan::New("UPLEFT").ToLocalChecked(), Nan::New<Uint32>(KEY_A1));
+        Nan::Set(obj, Nan::New("UPRIGHT").ToLocalChecked(), Nan::New<Uint32>(KEY_A3));
+        Nan::Set(obj, Nan::New("CENTER").ToLocalChecked(), Nan::New<Uint32>(KEY_B2));
+        Nan::Set(obj, Nan::New("DOWNLEFT").ToLocalChecked(), Nan::New<Uint32>(KEY_C1));
+        Nan::Set(obj, Nan::New("DOWNRIGHT").ToLocalChecked(), Nan::New<Uint32>(KEY_C3));
+        Nan::Set(obj, Nan::New("BTAB").ToLocalChecked(), Nan::New<Uint32>(KEY_BTAB));
+        Nan::Set(obj, Nan::New("BEG").ToLocalChecked(), Nan::New<Uint32>(KEY_BEG));
+        Nan::Set(obj, Nan::New("CANCEL").ToLocalChecked(), Nan::New<Uint32>(KEY_CANCEL));
+        Nan::Set(obj, Nan::New("CLOSE").ToLocalChecked(), Nan::New<Uint32>(KEY_CLOSE));
+        Nan::Set(obj, Nan::New("COMMAND").ToLocalChecked(), Nan::New<Uint32>(KEY_COMMAND));
+        Nan::Set(obj, Nan::New("COPY").ToLocalChecked(), Nan::New<Uint32>(KEY_COPY));
+        Nan::Set(obj, Nan::New("CREATE").ToLocalChecked(), Nan::New<Uint32>(KEY_CREATE));
+        Nan::Set(obj, Nan::New("END").ToLocalChecked(), Nan::New<Uint32>(KEY_END));
+        Nan::Set(obj, Nan::New("EXIT").ToLocalChecked(), Nan::New<Uint32>(KEY_EXIT));
+        Nan::Set(obj, Nan::New("FIND").ToLocalChecked(), Nan::New<Uint32>(KEY_FIND));
+        Nan::Set(obj, Nan::New("FIND").ToLocalChecked(), Nan::New<Uint32>(KEY_HELP));
+        Nan::Set(obj, Nan::New("MARK").ToLocalChecked(), Nan::New<Uint32>(KEY_MARK));
+        Nan::Set(obj, Nan::New("MESSAGE").ToLocalChecked(), Nan::New<Uint32>(KEY_MESSAGE));
+        Nan::Set(obj, Nan::New("MOVE").ToLocalChecked(), Nan::New<Uint32>(KEY_MOVE));
+        Nan::Set(obj, Nan::New("NEXT").ToLocalChecked(), Nan::New<Uint32>(KEY_NEXT));
+        Nan::Set(obj, Nan::New("OPEN").ToLocalChecked(), Nan::New<Uint32>(KEY_OPEN));
+        Nan::Set(obj, Nan::New("OPTIONS").ToLocalChecked(), Nan::New<Uint32>(KEY_OPTIONS));
+        Nan::Set(obj, Nan::New("PREVIOUS").ToLocalChecked(), Nan::New<Uint32>(KEY_PREVIOUS));
+        Nan::Set(obj, Nan::New("REDO").ToLocalChecked(), Nan::New<Uint32>(KEY_REDO));
+        Nan::Set(obj, Nan::New("REFERENCE").ToLocalChecked(), Nan::New<Uint32>(KEY_REFERENCE));
+        Nan::Set(obj, Nan::New("REFRESH").ToLocalChecked(), Nan::New<Uint32>(KEY_REFRESH));
+        Nan::Set(obj, Nan::New("REPLACE").ToLocalChecked(), Nan::New<Uint32>(KEY_REPLACE));
+        Nan::Set(obj, Nan::New("RESTART").ToLocalChecked(), Nan::New<Uint32>(KEY_RESTART));
+        Nan::Set(obj, Nan::New("RESUME").ToLocalChecked(), Nan::New<Uint32>(KEY_RESUME));
+        Nan::Set(obj, Nan::New("SAVE").ToLocalChecked(), Nan::New<Uint32>(KEY_SAVE));
+        Nan::Set(obj, Nan::New("S_BEG").ToLocalChecked(), Nan::New<Uint32>(KEY_SBEG));
+        Nan::Set(obj, Nan::New("S_CANCEL").ToLocalChecked(), Nan::New<Uint32>(KEY_SCANCEL));
+        Nan::Set(obj, Nan::New("S_COMMAND").ToLocalChecked(), Nan::New<Uint32>(KEY_SCOMMAND));
+        Nan::Set(obj, Nan::New("S_COPY").ToLocalChecked(), Nan::New<Uint32>(KEY_SCOPY));
+        Nan::Set(obj, Nan::New("S_CREATE").ToLocalChecked(), Nan::New<Uint32>(KEY_SCREATE));
+        Nan::Set(obj, Nan::New("S_DC").ToLocalChecked(), Nan::New<Uint32>(KEY_SDC));
+        Nan::Set(obj, Nan::New("S_DL").ToLocalChecked(), Nan::New<Uint32>(KEY_SDL));
+        Nan::Set(obj, Nan::New("SELECT").ToLocalChecked(), Nan::New<Uint32>(KEY_SELECT));
+        Nan::Set(obj, Nan::New("SEND").ToLocalChecked(), Nan::New<Uint32>(KEY_SEND));
+        Nan::Set(obj, Nan::New("S_EOL").ToLocalChecked(), Nan::New<Uint32>(KEY_SEOL));
+        Nan::Set(obj, Nan::New("S_EXIT").ToLocalChecked(), Nan::New<Uint32>(KEY_SEXIT));
+        Nan::Set(obj, Nan::New("S_FIND").ToLocalChecked(), Nan::New<Uint32>(KEY_SFIND));
+        Nan::Set(obj, Nan::New("S_HELP").ToLocalChecked(), Nan::New<Uint32>(KEY_SHELP));
+        Nan::Set(obj, Nan::New("S_HOME").ToLocalChecked(), Nan::New<Uint32>(KEY_SHOME));
+        Nan::Set(obj, Nan::New("S_IC").ToLocalChecked(), Nan::New<Uint32>(KEY_SIC));
+        Nan::Set(obj, Nan::New("S_LEFT").ToLocalChecked(), Nan::New<Uint32>(KEY_SLEFT));
+        Nan::Set(obj, Nan::New("S_MESSAGE").ToLocalChecked(), Nan::New<Uint32>(KEY_SMESSAGE));
+        Nan::Set(obj, Nan::New("S_MOVE").ToLocalChecked(), Nan::New<Uint32>(KEY_SMOVE));
+        Nan::Set(obj, Nan::New("S_NEXT").ToLocalChecked(), Nan::New<Uint32>(KEY_SNEXT));
+        Nan::Set(obj, Nan::New("S_OPTIONS").ToLocalChecked(), Nan::New<Uint32>(KEY_SOPTIONS));
+        Nan::Set(obj, Nan::New("S_PREVIOUS").ToLocalChecked(), Nan::New<Uint32>(KEY_SPREVIOUS));
+        Nan::Set(obj, Nan::New("S_PRINT").ToLocalChecked(), Nan::New<Uint32>(KEY_SPRINT));
+        Nan::Set(obj, Nan::New("S_REDO").ToLocalChecked(), Nan::New<Uint32>(KEY_SREDO));
+        Nan::Set(obj, Nan::New("S_REPLACE").ToLocalChecked(), Nan::New<Uint32>(KEY_SREPLACE));
+        Nan::Set(obj, Nan::New("S_RIGHT").ToLocalChecked(), Nan::New<Uint32>(KEY_SRIGHT));
+        Nan::Set(obj, Nan::New("S_RESUME").ToLocalChecked(), Nan::New<Uint32>(KEY_SRSUME));
+        Nan::Set(obj, Nan::New("S_SAVE").ToLocalChecked(), Nan::New<Uint32>(KEY_SSAVE));
+        Nan::Set(obj, Nan::New("S_SUSPEND").ToLocalChecked(), Nan::New<Uint32>(KEY_SSUSPEND));
+        Nan::Set(obj, Nan::New("S_UNDO").ToLocalChecked(), Nan::New<Uint32>(KEY_SUNDO));
+        Nan::Set(obj, Nan::New("SUSPEND").ToLocalChecked(), Nan::New<Uint32>(KEY_SUSPEND));
+        Nan::Set(obj, Nan::New("UNDO").ToLocalChecked(), Nan::New<Uint32>(KEY_UNDO));
+        Nan::Set(obj, Nan::New("MOUSE").ToLocalChecked(), Nan::New<Uint32>(KEY_MOUSE));
+        Nan::Set(obj, Nan::New("RESIZE").ToLocalChecked(), Nan::New<Uint32>(KEY_RESIZE));
+        Keys.Reset(obj);
 
-        obj = NanNew<Object>();
-        obj->Set(NanNew("BLACK"), NanNew<Uint32>(COLOR_BLACK));
-        obj->Set(NanNew("RED"), NanNew<Uint32>(COLOR_RED));
-        obj->Set(NanNew("GREEN"), NanNew<Uint32>(COLOR_GREEN));
-        obj->Set(NanNew("YELLOW"), NanNew<Uint32>(COLOR_YELLOW));
-        obj->Set(NanNew("BLUE"), NanNew<Uint32>(COLOR_BLUE));
-        obj->Set(NanNew("MAGENTA"), NanNew<Uint32>(COLOR_MAGENTA));
-        obj->Set(NanNew("CYAN"), NanNew<Uint32>(COLOR_CYAN));
-        obj->Set(NanNew("WHITE"), NanNew<Uint32>(COLOR_WHITE));
-        NanAssignPersistent(Colors, obj);
+        obj = Nan::New<Object>();
+        Nan::Set(obj, Nan::New("BLACK").ToLocalChecked(), Nan::New<Uint32>(COLOR_BLACK));
+        Nan::Set(obj, Nan::New("RED").ToLocalChecked(), Nan::New<Uint32>(COLOR_RED));
+        Nan::Set(obj, Nan::New("GREEN").ToLocalChecked(), Nan::New<Uint32>(COLOR_GREEN));
+        Nan::Set(obj, Nan::New("YELLOW").ToLocalChecked(), Nan::New<Uint32>(COLOR_YELLOW));
+        Nan::Set(obj, Nan::New("BLUE").ToLocalChecked(), Nan::New<Uint32>(COLOR_BLUE));
+        Nan::Set(obj, Nan::New("MAGENTA").ToLocalChecked(), Nan::New<Uint32>(COLOR_MAGENTA));
+        Nan::Set(obj, Nan::New("CYAN").ToLocalChecked(), Nan::New<Uint32>(COLOR_CYAN));
+        Nan::Set(obj, Nan::New("WHITE").ToLocalChecked(), Nan::New<Uint32>(COLOR_WHITE));
+        Colors.Reset(obj);
 
-        obj = NanNew<Object>();
-        obj->Set(NanNew("NORMAL"), NanNew<Uint32>(A_NORMAL));
-        obj->Set(NanNew("STANDOUT"), NanNew<Uint32>(A_STANDOUT));
-        obj->Set(NanNew("UNDERLINE"), NanNew<Uint32>(A_UNDERLINE));
-        obj->Set(NanNew("REVERSE"), NanNew<Uint32>(A_REVERSE));
-        obj->Set(NanNew("BLINK"), NanNew<Uint32>(A_BLINK));
-        obj->Set(NanNew("DIM"), NanNew<Uint32>(A_DIM));
-        obj->Set(NanNew("BOLD"), NanNew<Uint32>(A_BOLD));
-        obj->Set(NanNew("INVISIBLE"), NanNew<Uint32>(A_INVIS));
-        obj->Set(NanNew("PROTECT"), NanNew<Uint32>(A_PROTECT));
-        NanAssignPersistent(Attrs, obj);
+        obj = Nan::New<Object>();
+        Nan::Set(obj, Nan::New("NORMAL").ToLocalChecked(), Nan::New<Uint32>(A_NORMAL));
+        Nan::Set(obj, Nan::New("STANDOUT").ToLocalChecked(), Nan::New<Uint32>(A_STANDOUT));
+        Nan::Set(obj, Nan::New("UNDERLINE").ToLocalChecked(), Nan::New<Uint32>(A_UNDERLINE));
+        Nan::Set(obj, Nan::New("REVERSE").ToLocalChecked(), Nan::New<Uint32>(A_REVERSE));
+        Nan::Set(obj, Nan::New("BLINK").ToLocalChecked(), Nan::New<Uint32>(A_BLINK));
+        Nan::Set(obj, Nan::New("DIM").ToLocalChecked(), Nan::New<Uint32>(A_DIM));
+        Nan::Set(obj, Nan::New("BOLD").ToLocalChecked(), Nan::New<Uint32>(A_BOLD));
+        Nan::Set(obj, Nan::New("INVISIBLE").ToLocalChecked(), Nan::New<Uint32>(A_INVIS));
+        Nan::Set(obj, Nan::New("PROTECT").ToLocalChecked(), Nan::New<Uint32>(A_PROTECT));
+        Attrs.Reset(obj);
       }
     }
 
@@ -696,1032 +695,918 @@ class Window : public ObjectWrap {
 
   protected:
     static NAN_METHOD(New) {
-      NanScope();
-
       Window *win;
 
       if (stdin_fd < 0)
         win = new Window();
-      else if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
-        win = new Window(args[0]->Int32Value(), args[1]->Int32Value(), 0, 0);
-      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
-               && args[2]->IsInt32()) {
-        win = new Window(args[0]->Int32Value(), args[1]->Int32Value(),
-                         args[2]->Int32Value(), 0);
-      } else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32()
-                 && args[2]->IsInt32() && args[3]->IsInt32()) {
-        win = new Window(args[0]->Int32Value(), args[1]->Int32Value(),
-                         args[2]->Int32Value(), args[3]->Int32Value());
+      else if (info.Length() == 2 && info[0]->IsInt32() && info[1]->IsInt32())
+        win = new Window(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(), 0, 0);
+      else if (info.Length() == 3 && info[0]->IsInt32() && info[1]->IsInt32()
+               && info[2]->IsInt32()) {
+        win = new Window(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(),
+                         Nan::To<int32_t>(info[2]).FromJust(), 0);
+      } else if (info.Length() == 4 && info[0]->IsInt32() && info[1]->IsInt32()
+                 && info[2]->IsInt32() && info[3]->IsInt32()) {
+        win = new Window(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(),
+                         Nan::To<int32_t>(info[2]).FromJust(), Nan::To<int32_t>(info[3]).FromJust());
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      win->Wrap(args.This());
+      win->Wrap(info.This());
       win->Ref();
 
-      NanAssignPersistent(win->Emit, NanObjectWrapHandle(win)->Get(NanNew(emit_symbol)).As<Function>());
+      win->Emit.Reset(Nan::Get(win->handle(), Nan::New(emit_symbol)).ToLocalChecked().As<Function>());
 
-      NanReturnValue(args.This());
+      info.GetReturnValue().Set(info.This());
     }
 
     static NAN_METHOD(Close) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       if (win->panel() != NULL)
         win->close();
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Hide) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
-
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       win->panel()->hide();
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Show) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
-
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       win->panel()->show();
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Top) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
-
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       win->panel()->top();
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Bottom) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
-
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       win->panel()->bottom();
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Mvwin) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret = 0;
-      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
-        ret = win->panel()->mvwin(args[0]->Int32Value(), args[1]->Int32Value());
+      if (info.Length() == 2 && info[0]->IsInt32() && info[1]->IsInt32())
+        ret = win->panel()->mvwin(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Refresh) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
-
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       int ret = win->panel()->refresh();
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Noutrefresh) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret = win->panel()->noutrefresh();
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Redraw) {
-      NanScope();
-
       MyPanel::redraw();
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Frame) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
-      if (args.Length() == 0) {
+      if (info.Length() == 0) {
         win->panel()->frame(NULL, NULL);
-      } else if (args.Length() == 1 && args[0]->IsString()) {
-        String::Utf8Value str(args[0]->ToString());
+      } else if (info.Length() == 1 && info[0]->IsString()) {
+        Nan::Utf8String str(info[0].As<String>());
         win->panel()->frame(ToCString(str), NULL);
-      } else if (args.Length() == 2 && args[0]->IsString()
-                 && args[1]->IsString()) {
-        String::Utf8Value str0(args[0]->ToString());
-        String::Utf8Value str1(args[1]->ToString());
+      } else if (info.Length() == 2 && info[0]->IsString()
+                 && info[1]->IsString()) {
+        Nan::Utf8String str0(info[0].As<String>());
+        Nan::Utf8String str1(info[1].As<String>());
         win->panel()->frame(ToCString(str0), ToCString(str1));
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Boldframe) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
-      if (args.Length() == 0) {
+      if (info.Length() == 0) {
         win->panel()->boldframe(NULL, NULL);
-      } else if (args.Length() == 1 && args[0]->IsString()) {
-        String::Utf8Value str(args[0]->ToString());
+      } else if (info.Length() == 1 && info[0]->IsString()) {
+        Nan::Utf8String str(info[0].As<String>());
         win->panel()->boldframe(ToCString(str), NULL);
-      } else if (args.Length() == 2 && args[0]->IsString()
-                 && args[1]->IsString()) {
-        String::Utf8Value str0(args[0]->ToString());
-        String::Utf8Value str1(args[1]->ToString());
+      } else if (info.Length() == 2 && info[0]->IsString()
+                 && info[1]->IsString()) {
+        Nan::Utf8String str0(info[0].As<String>());
+        Nan::Utf8String str1(info[1].As<String>());
         win->panel()->boldframe(ToCString(str0), ToCString(str1));
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Label) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
-      if (args.Length() == 1 && args[0]->IsString()) {
-        String::Utf8Value str(args[0]->ToString());
+      if (info.Length() == 1 && info[0]->IsString()) {
+        Nan::Utf8String str(info[0].As<String>());
         win->panel()->label(ToCString(str), NULL);
-      } else if (args.Length() == 2 && args[0]->IsString()
-                 && args[1]->IsString()) {
-        String::Utf8Value str0(args[0]->ToString());
-        String::Utf8Value str1(args[1]->ToString());
+      } else if (info.Length() == 2 && info[0]->IsString()
+                 && info[1]->IsString()) {
+        Nan::Utf8String str0(info[0].As<String>());
+        Nan::Utf8String str1(info[1].As<String>());
         win->panel()->label(ToCString(str0), ToCString(str1));
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Centertext) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
-      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsString()) {
-        String::Utf8Value str(args[1]->ToString());
-        win->panel()->centertext(args[0]->Int32Value(), ToCString(str));
+      if (info.Length() == 2 && info[0]->IsInt32() && info[1]->IsString()) {
+        Nan::Utf8String str(info[1].As<String>());
+        win->panel()->centertext(Nan::To<int32_t>(info[0]).FromJust(), ToCString(str));
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Move) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
-        ret = win->panel()->move(args[0]->Int32Value(), args[1]->Int32Value());
+      if (info.Length() == 2 && info[0]->IsInt32() && info[1]->IsInt32())
+        ret = win->panel()->move(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Addch) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsUint32())
-        ret = win->panel()->addch(args[0]->Uint32Value());
-      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
-               && args[2]->IsUint32()) {
-        ret = win->panel()->addch(args[0]->Int32Value(), args[1]->Int32Value(),
-                                  args[2]->Uint32Value());
+      if (info.Length() == 1 && info[0]->IsUint32())
+        ret = win->panel()->addch(Nan::To<uint32_t>(info[0]).FromJust());
+      else if (info.Length() == 3 && info[0]->IsInt32() && info[1]->IsInt32()
+               && info[2]->IsUint32()) {
+        ret = win->panel()->addch(Nan::To<uint32_t>(info[0]).FromJust(), Nan::To<uint32_t>(info[1]).FromJust(),
+                                  Nan::To<uint32_t>(info[2]).FromJust());
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Echochar) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsUint32())
-        ret = win->panel()->echochar(args[0]->Uint32Value());
+      if (info.Length() == 1 && info[0]->IsUint32())
+        ret = win->panel()->echochar(Nan::To<uint32_t>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Addstr) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsString()) {
-        String::Utf8Value str(args[0]->ToString());
+      if (info.Length() == 1 && info[0]->IsString()) {
+        Nan::Utf8String str(info[0].As<String>());
         ret = win->panel()->addstr(ToCString(str), -1);
-      } else if (args.Length() == 2 && args[0]->IsString()
-                 && args[1]->IsInt32()) {
-        String::Utf8Value str(args[0]->ToString());
-        ret = win->panel()->addstr(ToCString(str), args[1]->Int32Value());
-      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
-                 && args[2]->IsString()) {
-        String::Utf8Value str(args[2]->ToString());
-        ret = win->panel()->addstr(args[0]->Int32Value(), args[1]->Int32Value(),
+      } else if (info.Length() == 2 && info[0]->IsString()
+                 && info[1]->IsInt32()) {
+        Nan::Utf8String str(info[0].As<String>());
+        ret = win->panel()->addstr(ToCString(str), Nan::To<int32_t>(info[1]).FromJust());
+      } else if (info.Length() == 3 && info[0]->IsInt32() && info[1]->IsInt32()
+                 && info[2]->IsString()) {
+        Nan::Utf8String str(info[2].As<String>());
+        ret = win->panel()->addstr(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(),
                                    ToCString(str), -1);
-      } else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32()
-                 && args[2]->IsString() && args[3]->IsInt32()) {
-        String::Utf8Value str(args[2]->ToString());
-        ret = win->panel()->addstr(args[0]->Int32Value(), args[1]->Int32Value(),
-                                   ToCString(str), args[3]->Int32Value());
+      } else if (info.Length() == 4 && info[0]->IsInt32() && info[1]->IsInt32()
+                 && info[2]->IsString() && info[3]->IsInt32()) {
+        Nan::Utf8String str(info[2].As<String>());
+        ret = win->panel()->addstr(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(),
+                                   ToCString(str), Nan::To<int32_t>(info[3]).FromJust());
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     // FIXME: addchstr requires a pointer to a chtype not an actual value,
     //        unlike the other ACS_*-using methods
     /*static NAN_METHOD(Addchstr) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsUint32())
-        ret = win->panel()->addchstr(args[0]->Uint32Value(), -1);
-      else if (args.Length() == 2 && args[0]->IsUint32() && args[1]->IsInt32()) {
-        ret = win->panel()->addchstr(args[0]->Uint32Value(),
-                                     args[1]->Int32Value());
-      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
-                 && args[2]->IsUint32()) {
-        ret = win->panel()->addchstr(args[0]->Int32Value(), args[1]->Int32Value(),
-                                     args[2]->Uint32Value(), -1);
-      } else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32()
-                 && args[2]->IsUint32() && args[3]->IsInt32()) {
-        ret = win->panel()->addchstr(args[0]->Int32Value(), args[1]->Int32Value(),
-                                     args[2]->Uint32Value(),
-                                     args[3]->Int32Value());
+      if (info.Length() == 1 && info[0]->IsUint32())
+        ret = win->panel()->addchstr(Nan::To<uint32_t>(info[0]).FromJust(), -1);
+      else if (info.Length() == 2 && info[0]->IsUint32() && info[1]->IsInt32()) {
+        ret = win->panel()->addchstr(Nan::To<uint32_t>(info[0]).FromJust(),
+                                     Nan::To<int32_t>(info[1]).FromJust());
+      } else if (info.Length() == 3 && info[0]->IsInt32() && info[1]->IsInt32()
+                 && info[2]->IsUint32()) {
+        ret = win->panel()->addchstr(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(),
+                                     Nan::To<uint32_t>(info[2]).FromJust(), -1);
+      } else if (info.Length() == 4 && info[0]->IsInt32() && info[1]->IsInt32()
+                 && info[2]->IsUint32() && info[3]->IsInt32()) {
+        ret = win->panel()->addchstr(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(),
+                                     Nan::To<uint32_t>(info[2]).FromJust(),
+                                     Nan::To<int32_t>(info[3]).FromJust());
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }*/
 
     static NAN_METHOD(Inch) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       unsigned int ret;
-      if (args.Length() == 0)
+      if (info.Length() == 0)
         ret = win->panel()->inch();
-      else if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
-        ret = win->panel()->inch(args[0]->Int32Value(), args[1]->Int32Value());
+      else if (info.Length() == 2 && info[0]->IsInt32() && info[1]->IsInt32())
+        ret = win->panel()->inch(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     // FIXME: Need pointer to chtype instead of actual value
     /*static NAN_METHOD(Inchstr) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsUint32())
-        ret = win->panel()->inchstr(args[0]->Uint32Value(), -1);
-      else if (args.Length() == 2 && args[0]->IsUint32() && args[1]->IsInt32()) {
-        ret = win->panel()->inchstr(args[0]->Uint32Value(),
-                                    args[1]->Int32Value());
-      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
-                 && args[2]->IsUint32()) {
-        ret = win->panel()->inchstr(args[0]->Int32Value(), args[1]->Int32Value(),
-                                    args[2]->Uint32Value(), -1);
-      } else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32()
-                 && args[2]->IsUint32() && args[3]->IsInt32()) {
-        ret = win->panel()->inchstr(args[0]->Int32Value(), args[1]->Int32Value(),
-                                    args[2]->Uint32Value(),
-                                    args[3]->Int32Value());
+      if (info.Length() == 1 && info[0]->IsUint32())
+        ret = win->panel()->inchstr(Nan::To<uint32_t>(info[0]).FromJust(), -1);
+      else if (info.Length() == 2 && info[0]->IsUint32() && info[1]->IsInt32()) {
+        ret = win->panel()->inchstr(Nan::To<uint32_t>(info[0]).FromJust(),
+                                    Nan::To<int32_t>(info[1]).FromJust());
+      } else if (info.Length() == 3 && info[0]->IsInt32() && info[1]->IsInt32()
+                 && info[2]->IsUint32()) {
+        ret = win->panel()->inchstr(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(),
+                                    Nan::To<uint32_t>(info[2]).FromJust(), -1);
+      } else if (info.Length() == 4 && info[0]->IsInt32() && info[1]->IsInt32()
+                 && info[2]->IsUint32() && info[3]->IsInt32()) {
+        ret = win->panel()->inchstr(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(),
+                                    Nan::To<uint32_t>(info[2]).FromJust(),
+                                    Nan::To<int32_t>(info[3]).FromJust());
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }*/
 
     static NAN_METHOD(Insch) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsUint32())
-        ret = win->panel()->insch(args[0]->Uint32Value());
-      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
-               && args[2]->IsUint32()) {
-        ret = win->panel()->insch(args[0]->Int32Value(), args[1]->Int32Value(),
-                                  args[2]->Uint32Value());
+      if (info.Length() == 1 && info[0]->IsUint32())
+        ret = win->panel()->insch(Nan::To<uint32_t>(info[0]).FromJust());
+      else if (info.Length() == 3 && info[0]->IsInt32() && info[1]->IsInt32()
+               && info[2]->IsUint32()) {
+        ret = win->panel()->insch(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(),
+                                  Nan::To<uint32_t>(info[2]).FromJust());
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Chgat) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsUint32()) {
-        ret = win->panel()->chgat(args[0]->Int32Value(), args[1]->Uint32Value(),
+      if (info.Length() == 2 && info[0]->IsInt32() && info[1]->IsUint32()) {
+        ret = win->panel()->chgat(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<uint32_t>(info[1]).FromJust(),
                                   win->panel()->getcolor());
-      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsUint32()
-                 && args[2]->IsUint32()) {
-        ret = win->panel()->chgat(args[0]->Int32Value(),
-                                  (attr_t)(args[1]->Uint32Value()),
-                                  args[2]->Uint32Value());
-      } else if (args.Length() == 4 && args[0]->IsUint32() && args[1]->IsUint32()
-                 && args[2]->IsInt32() && args[3]->IsUint32()) {
-        ret = win->panel()->chgat(args[0]->Uint32Value(), args[1]->Uint32Value(),
-                                  args[2]->Int32Value(),
-                                  (attr_t)(args[3]->Uint32Value()),
+      } else if (info.Length() == 3 && info[0]->IsInt32() && info[1]->IsUint32()
+                 && info[2]->IsUint32()) {
+        ret = win->panel()->chgat(Nan::To<int32_t>(info[0]).FromJust(),
+                                  (attr_t)(Nan::To<uint32_t>(info[1]).FromJust()),
+                                  Nan::To<uint32_t>(info[2]).FromJust());
+      } else if (info.Length() == 4 && info[0]->IsUint32() && info[1]->IsUint32()
+                 && info[2]->IsInt32() && info[3]->IsUint32()) {
+        ret = win->panel()->chgat(Nan::To<uint32_t>(info[0]).FromJust(), Nan::To<uint32_t>(info[1]).FromJust(),
+                                  Nan::To<int32_t>(info[2]).FromJust(),
+                                  (attr_t)(Nan::To<uint32_t>(info[3]).FromJust()),
                                   win->panel()->getcolor());
-      } else if (args.Length() == 5 && args[0]->IsUint32() && args[1]->IsUint32()
-                 && args[2]->IsInt32() && args[3]->IsUint32()
-                 && args[4]->IsUint32()) {
-        ret = win->panel()->chgat(args[0]->Uint32Value(), args[1]->Uint32Value(),
-                                  args[2]->Int32Value(),
-                                  (attr_t)(args[3]->Uint32Value()),
-                                  args[4]->Uint32Value());
+      } else if (info.Length() == 5 && info[0]->IsUint32() && info[1]->IsUint32()
+                 && info[2]->IsInt32() && info[3]->IsUint32()
+                 && info[4]->IsUint32()) {
+        ret = win->panel()->chgat(Nan::To<uint32_t>(info[0]).FromJust(), Nan::To<uint32_t>(info[1]).FromJust(),
+                                  Nan::To<int32_t>(info[2]).FromJust(),
+                                  (attr_t)(Nan::To<uint32_t>(info[3]).FromJust()),
+                                  Nan::To<uint32_t>(info[4]).FromJust());
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Insertln) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret = win->panel()->insertln();
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Insdelln) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 0)
+      if (info.Length() == 0)
         ret = win->panel()->insdelln(1);
-      else if (args.Length() == 1 && args[0]->IsInt32())
-        ret = win->panel()->insdelln(args[0]->Int32Value());
+      else if (info.Length() == 1 && info[0]->IsInt32())
+        ret = win->panel()->insdelln(Nan::To<int32_t>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Insstr) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsString()) {
-        String::Utf8Value str(args[0]->ToString());
+      if (info.Length() == 1 && info[0]->IsString()) {
+        Nan::Utf8String str(info[0].As<String>());
         ret = win->panel()->insstr(ToCString(str), -1);
-      } else if (args.Length() == 2 && args[0]->IsString()
-                 && args[1]->IsInt32()) {
-        String::Utf8Value str(args[0]->ToString());
-        ret = win->panel()->insstr(ToCString(str), args[1]->Int32Value());
-      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
-                 && args[2]->IsString()) {
-        String::Utf8Value str(args[2]->ToString());
-        ret = win->panel()->insstr(args[0]->Int32Value(), args[1]->Int32Value(),
+      } else if (info.Length() == 2 && info[0]->IsString()
+                 && info[1]->IsInt32()) {
+        Nan::Utf8String str(info[0].As<String>());
+        ret = win->panel()->insstr(ToCString(str), Nan::To<int32_t>(info[1]).FromJust());
+      } else if (info.Length() == 3 && info[0]->IsInt32() && info[1]->IsInt32()
+                 && info[2]->IsString()) {
+        Nan::Utf8String str(info[2].As<String>());
+        ret = win->panel()->insstr(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(),
                                    ToCString(str), -1);
-      } else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32()
-                 && args[2]->IsString() && args[3]->IsInt32()) {
-        String::Utf8Value str(args[2]->ToString());
-        ret = win->panel()->insstr(args[0]->Int32Value(), args[1]->Int32Value(),
-                                   ToCString(str), args[3]->Int32Value());
+      } else if (info.Length() == 4 && info[0]->IsInt32() && info[1]->IsInt32()
+                 && info[2]->IsString() && info[3]->IsInt32()) {
+        Nan::Utf8String str(info[2].As<String>());
+        ret = win->panel()->insstr(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(),
+                                   ToCString(str), Nan::To<int32_t>(info[3]).FromJust());
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Attron) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsUint32())
-        ret = win->panel()->attron(args[0]->Uint32Value());
+      if (info.Length() == 1 && info[0]->IsUint32())
+        ret = win->panel()->attron(Nan::To<uint32_t>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Attroff) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsUint32())
-        ret = win->panel()->attroff(args[0]->Uint32Value());
+      if (info.Length() == 1 && info[0]->IsUint32())
+        ret = win->panel()->attroff(Nan::To<uint32_t>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Attrset) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsUint32())
-        ret = win->panel()->attrset(args[0]->Uint32Value());
+      if (info.Length() == 1 && info[0]->IsUint32())
+        ret = win->panel()->attrset(Nan::To<uint32_t>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Attrget) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       unsigned int ret = win->panel()->attrget();
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Box) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 0)
+      if (info.Length() == 0)
         ret = win->panel()->box(0, 0);
-      else if (args.Length() == 1 && args[0]->IsUint32())
-        ret = win->panel()->box(args[0]->Uint32Value(), 0);
-      else if (args.Length() == 2 && args[0]->IsUint32() && args[1]->IsUint32())
-        ret = win->panel()->box(args[0]->Uint32Value(), args[1]->Uint32Value());
+      else if (info.Length() == 1 && info[0]->IsUint32())
+        ret = win->panel()->box(Nan::To<uint32_t>(info[0]).FromJust(), 0);
+      else if (info.Length() == 2 && info[0]->IsUint32() && info[1]->IsUint32())
+        ret = win->panel()->box(Nan::To<uint32_t>(info[0]).FromJust(), Nan::To<uint32_t>(info[1]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Border) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 0)
+      if (info.Length() == 0)
         ret = win->panel()->border(0);
-      else if (args.Length() == 1 && args[0]->IsUint32())
-        ret = win->panel()->border(args[0]->Uint32Value(), 0);
-      else if (args.Length() == 2 && args[0]->IsUint32()
-               && args[1]->IsUint32()) {
-        ret = win->panel()->border(args[0]->Uint32Value(),
-                                   args[1]->Uint32Value(), 0);
-      } else if (args.Length() == 3 && args[0]->IsUint32() && args[1]->IsUint32()
-                 && args[2]->IsUint32()) {
-        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(),
-                                   args[2]->Uint32Value(), 0);
-      } else if (args.Length() == 4 && args[0]->IsUint32() && args[1]->IsUint32()
-                 && args[2]->IsUint32() && args[3]->IsUint32()) {
-        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(),
-                                   args[2]->Uint32Value(),
-                                   args[3]->Uint32Value(), 0);
-      } else if (args.Length() == 5 && args[0]->IsUint32() && args[1]->IsUint32()
-                 && args[2]->IsUint32() && args[3]->IsUint32()
-                 && args[4]->IsUint32()) {
-        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(),
-                                   args[2]->Uint32Value(), args[3]->Uint32Value(),
-                                   args[4]->Uint32Value(), 0);
-      } else if (args.Length() == 6 && args[0]->IsUint32() && args[1]->IsUint32()
-                 && args[2]->IsUint32() && args[3]->IsUint32()
-                 && args[4]->IsUint32() && args[5]->IsUint32()) {
-        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(),
-                                   args[2]->Uint32Value(), args[3]->Uint32Value(),
-                                   args[4]->Uint32Value(),
-                                   args[5]->Uint32Value(), 0);
-      } else if (args.Length() == 7 && args[0]->IsUint32() && args[1]->IsUint32()
-                 && args[2]->IsUint32() && args[3]->IsUint32()
-                 && args[4]->IsUint32() && args[5]->IsUint32()
-                 && args[6]->IsUint32()) {
-        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(),
-                                   args[2]->Uint32Value(), args[3]->Uint32Value(),
-                                   args[4]->Uint32Value(), args[5]->Uint32Value(),
-                                   args[6]->Uint32Value(), 0);
-      } else if (args.Length() == 8 && args[0]->IsUint32() && args[1]->IsUint32()
-                 && args[2]->IsUint32() && args[3]->IsUint32()
-                 && args[4]->IsUint32() && args[5]->IsUint32()
-                 && args[6]->IsUint32() && args[7]->IsUint32()) {
-        ret = win->panel()->border(args[0]->Uint32Value(), args[1]->Uint32Value(),
-                                   args[2]->Uint32Value(), args[3]->Uint32Value(),
-                                   args[4]->Uint32Value(), args[5]->Uint32Value(),
-                                   args[6]->Uint32Value(), args[7]->Uint32Value());
+      else if (info.Length() == 1 && info[0]->IsUint32())
+        ret = win->panel()->border(Nan::To<uint32_t>(info[0]).FromJust(), 0);
+      else if (info.Length() == 2 && info[0]->IsUint32()
+               && info[1]->IsUint32()) {
+        ret = win->panel()->border(Nan::To<uint32_t>(info[0]).FromJust(),
+                                   Nan::To<uint32_t>(info[1]).FromJust(), 0);
+      } else if (info.Length() == 3 && info[0]->IsUint32() && info[1]->IsUint32()
+                 && info[2]->IsUint32()) {
+        ret = win->panel()->border(Nan::To<uint32_t>(info[0]).FromJust(), Nan::To<uint32_t>(info[1]).FromJust(),
+                                   Nan::To<uint32_t>(info[2]).FromJust(), 0);
+      } else if (info.Length() == 4 && info[0]->IsUint32() && info[1]->IsUint32()
+                 && info[2]->IsUint32() && info[3]->IsUint32()) {
+        ret = win->panel()->border(Nan::To<uint32_t>(info[0]).FromJust(), Nan::To<uint32_t>(info[1]).FromJust(),
+                                   Nan::To<uint32_t>(info[2]).FromJust(),
+                                   Nan::To<uint32_t>(info[3]).FromJust(), 0);
+      } else if (info.Length() == 5 && info[0]->IsUint32() && info[1]->IsUint32()
+                 && info[2]->IsUint32() && info[3]->IsUint32()
+                 && info[4]->IsUint32()) {
+        ret = win->panel()->border(Nan::To<uint32_t>(info[0]).FromJust(), Nan::To<uint32_t>(info[1]).FromJust(),
+                                   Nan::To<uint32_t>(info[2]).FromJust(), Nan::To<uint32_t>(info[3]).FromJust(),
+                                   Nan::To<uint32_t>(info[4]).FromJust(), 0);
+      } else if (info.Length() == 6 && info[0]->IsUint32() && info[1]->IsUint32()
+                 && info[2]->IsUint32() && info[3]->IsUint32()
+                 && info[4]->IsUint32() && info[5]->IsUint32()) {
+        ret = win->panel()->border(Nan::To<uint32_t>(info[0]).FromJust(), Nan::To<uint32_t>(info[1]).FromJust(),
+                                   Nan::To<uint32_t>(info[2]).FromJust(), Nan::To<uint32_t>(info[3]).FromJust(),
+                                   Nan::To<uint32_t>(info[4]).FromJust(),
+                                   Nan::To<uint32_t>(info[5]).FromJust(), 0);
+      } else if (info.Length() == 7 && info[0]->IsUint32() && info[1]->IsUint32()
+                 && info[2]->IsUint32() && info[3]->IsUint32()
+                 && info[4]->IsUint32() && info[5]->IsUint32()
+                 && info[6]->IsUint32()) {
+        ret = win->panel()->border(Nan::To<uint32_t>(info[0]).FromJust(), Nan::To<uint32_t>(info[1]).FromJust(),
+                                   Nan::To<uint32_t>(info[2]).FromJust(), Nan::To<uint32_t>(info[3]).FromJust(),
+                                   Nan::To<uint32_t>(info[4]).FromJust(), Nan::To<uint32_t>(info[5]).FromJust(),
+                                   Nan::To<uint32_t>(info[6]).FromJust(), 0);
+      } else if (info.Length() == 8 && info[0]->IsUint32() && info[1]->IsUint32()
+                 && info[2]->IsUint32() && info[3]->IsUint32()
+                 && info[4]->IsUint32() && info[5]->IsUint32()
+                 && info[6]->IsUint32() && info[7]->IsUint32()) {
+        ret = win->panel()->border(Nan::To<uint32_t>(info[0]).FromJust(), Nan::To<uint32_t>(info[1]).FromJust(),
+                                   Nan::To<uint32_t>(info[2]).FromJust(), Nan::To<uint32_t>(info[3]).FromJust(),
+                                   Nan::To<uint32_t>(info[4]).FromJust(), Nan::To<uint32_t>(info[5]).FromJust(),
+                                   Nan::To<uint32_t>(info[6]).FromJust(), Nan::To<uint32_t>(info[7]).FromJust());
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Hline) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsInt32())
-        ret = win->panel()->hline(args[0]->Int32Value(), 0);
-      else if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsUint32())
-        ret = win->panel()->hline(args[0]->Int32Value(), args[1]->Uint32Value());
-      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
-               && args[2]->IsInt32()) {
-        ret = win->panel()->hline(args[0]->Int32Value(), args[1]->Int32Value(),
-                                  args[2]->Int32Value(), 0);
-      } else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32()
-                 && args[2]->IsInt32() && args[3]->IsUint32()) {
-        ret = win->panel()->hline(args[0]->Int32Value(), args[1]->Int32Value(),
-                                  args[2]->Int32Value(), args[3]->Uint32Value());
+      if (info.Length() == 1 && info[0]->IsInt32())
+        ret = win->panel()->hline(Nan::To<int32_t>(info[0]).FromJust(), 0);
+      else if (info.Length() == 2 && info[0]->IsInt32() && info[1]->IsUint32())
+        ret = win->panel()->hline(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<uint32_t>(info[1]).FromJust());
+      else if (info.Length() == 3 && info[0]->IsInt32() && info[1]->IsInt32()
+               && info[2]->IsInt32()) {
+        ret = win->panel()->hline(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(),
+                                  Nan::To<int32_t>(info[2]).FromJust(), 0);
+      } else if (info.Length() == 4 && info[0]->IsInt32() && info[1]->IsInt32()
+                 && info[2]->IsInt32() && info[3]->IsUint32()) {
+        ret = win->panel()->hline(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(),
+                                  Nan::To<int32_t>(info[2]).FromJust(), Nan::To<uint32_t>(info[3]).FromJust());
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Vline) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsInt32())
-        ret = win->panel()->vline(args[0]->Int32Value(), 0);
-      else if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsUint32())
-        ret = win->panel()->vline(args[0]->Int32Value(), args[1]->Uint32Value());
-      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
-               && args[2]->IsInt32()) {
-        ret = win->panel()->vline(args[0]->Int32Value(), args[1]->Int32Value(),
-                                  args[2]->Int32Value(), 0);
-      } else if (args.Length() == 4 && args[0]->IsInt32() && args[1]->IsInt32()
-                 && args[2]->IsInt32() && args[3]->IsUint32()) {
-        ret = win->panel()->vline(args[0]->Int32Value(), args[1]->Int32Value(),
-                                  args[2]->Int32Value(), args[3]->Uint32Value());
+      if (info.Length() == 1 && info[0]->IsInt32())
+        ret = win->panel()->vline(Nan::To<int32_t>(info[0]).FromJust(), 0);
+      else if (info.Length() == 2 && info[0]->IsInt32() && info[1]->IsUint32())
+        ret = win->panel()->vline(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<uint32_t>(info[1]).FromJust());
+      else if (info.Length() == 3 && info[0]->IsInt32() && info[1]->IsInt32()
+               && info[2]->IsInt32()) {
+        ret = win->panel()->vline(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(),
+                                  Nan::To<int32_t>(info[2]).FromJust(), 0);
+      } else if (info.Length() == 4 && info[0]->IsInt32() && info[1]->IsInt32()
+                 && info[2]->IsInt32() && info[3]->IsUint32()) {
+        ret = win->panel()->vline(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(),
+                                  Nan::To<int32_t>(info[2]).FromJust(), Nan::To<uint32_t>(info[3]).FromJust());
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Erase) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret = win->panel()->erase();
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Clear) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret = win->panel()->clear();
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Clrtobot) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret = win->panel()->clrtobot();
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Clrtoeol) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret = win->panel()->clrtoeol();
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Delch) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 0)
+      if (info.Length() == 0)
         ret = win->panel()->delch();
-      else if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32())
-        ret = win->panel()->delch(args[0]->Int32Value(), args[1]->Int32Value());
+      else if (info.Length() == 2 && info[0]->IsInt32() && info[1]->IsInt32())
+        ret = win->panel()->delch(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Deleteln) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret = win->panel()->deleteln();
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Scroll) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 0)
+      if (info.Length() == 0)
         ret = win->panel()->scroll(1);
-      else if (args.Length() == 1 && args[0]->IsInt32())
-        ret = win->panel()->scroll(args[0]->Int32Value());
+      else if (info.Length() == 1 && info[0]->IsInt32())
+        ret = win->panel()->scroll(Nan::To<int32_t>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Setscrreg) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32()) {
-        ret = win->panel()->setscrreg(args[0]->Int32Value(),
-                                      args[1]->Int32Value());
+      if (info.Length() == 2 && info[0]->IsInt32() && info[1]->IsInt32()) {
+        ret = win->panel()->setscrreg(Nan::To<int32_t>(info[0]).FromJust(),
+                                      Nan::To<int32_t>(info[1]).FromJust());
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     /*static NAN_METHOD(Touchline) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32()) {
-        ret = win->panel()->touchline(args[0]->Int32Value(),
-                                      args[1]->Int32Value());
+      if (info.Length() == 2 && info[0]->IsInt32() && info[1]->IsInt32()) {
+        ret = win->panel()->touchline(Nan::To<int32_t>(info[0]).FromJust(),
+                                      Nan::To<int32_t>(info[1]).FromJust());
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }*/
 
     static NAN_METHOD(Touchwin) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret = win->panel()->touchwin();
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Untouchwin) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret = win->panel()->untouchwin();
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Touchln) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32()) {
-        ret = win->panel()->touchln(args[0]->Int32Value(),
-                                    args[1]->Int32Value(), true);
-      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
-                 && args[2]->IsBoolean()) {
-        ret = win->panel()->touchln(args[0]->Int32Value(), args[1]->Int32Value(),
-                                    args[2]->BooleanValue());
+      if (info.Length() == 2 && info[0]->IsInt32() && info[1]->IsInt32()) {
+        ret = win->panel()->touchln(Nan::To<int32_t>(info[0]).FromJust(),
+                                    Nan::To<int32_t>(info[1]).FromJust(), true);
+      } else if (info.Length() == 3 && info[0]->IsInt32() && info[1]->IsInt32()
+                 && info[2]->IsBoolean()) {
+        ret = win->panel()->touchln(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(),
+                                    Nan::To<bool>(info[2]).FromJust());
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Is_linetouched) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       bool ret;
-      if (args.Length() == 1 && args[0]->IsInt32())
-        ret = win->panel()->is_linetouched(args[0]->Int32Value());
+      if (info.Length() == 1 && info[0]->IsInt32())
+        ret = win->panel()->is_linetouched(Nan::To<int32_t>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Boolean>(ret));
+      info.GetReturnValue().Set(Nan::New<Boolean>(ret));
     }
 
     static NAN_METHOD(Redrawln) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32()) {
-        ret = win->panel()->redrawln(args[0]->Int32Value(),
-                                     args[1]->Int32Value());
+      if (info.Length() == 2 && info[0]->IsInt32() && info[1]->IsInt32()) {
+        ret = win->panel()->redrawln(Nan::To<int32_t>(info[0]).FromJust(),
+                                     Nan::To<int32_t>(info[1]).FromJust());
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Syncdown) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       win->panel()->syncdown();
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Syncup) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       win->panel()->syncup();
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Cursyncup) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       win->panel()->cursyncup();
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Wresize) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 2 && args[0]->IsInt32() && args[1]->IsInt32()) {
-        ret = win->panel()->wresize(args[0]->Int32Value(),
-                                    args[1]->Int32Value());
+      if (info.Length() == 2 && info[0]->IsInt32() && info[1]->IsInt32()) {
+        ret = win->panel()->wresize(Nan::To<int32_t>(info[0]).FromJust(),
+                                    Nan::To<int32_t>(info[1]).FromJust());
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Print) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsString()) {
-        String::Utf8Value str(args[0]->ToString());
+      if (info.Length() == 1 && info[0]->IsString()) {
+        Nan::Utf8String str(info[0].As<String>());
         ret = win->panel()->printw("%s", ToCString(str));
-      } else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
-                 && args[2]->IsString()) {
-        String::Utf8Value str(args[2]->ToString());
-        ret = win->panel()->printw(args[0]->Int32Value(), args[1]->Int32Value(),
+      } else if (info.Length() == 3 && info[0]->IsInt32() && info[1]->IsInt32()
+                 && info[2]->IsString()) {
+        Nan::Utf8String str(info[2].As<String>());
+        ret = win->panel()->printw(Nan::To<int32_t>(info[0]).FromJust(), Nan::To<int32_t>(info[1]).FromJust(),
                                    "%s", ToCString(str));
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Clearok) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsBoolean())
-        ret = win->panel()->clearok(args[0]->BooleanValue());
+      if (info.Length() == 1 && info[0]->IsBoolean())
+        ret = win->panel()->clearok(Nan::To<bool>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Scrollok) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsBoolean())
-        ret = win->panel()->scrollok(args[0]->BooleanValue());
+      if (info.Length() == 1 && info[0]->IsBoolean())
+        ret = win->panel()->scrollok(Nan::To<bool>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Idlok) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsBoolean())
-        ret = win->panel()->idlok(args[0]->BooleanValue());
+      if (info.Length() == 1 && info[0]->IsBoolean())
+        ret = win->panel()->idlok(Nan::To<bool>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Idcok) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
-      if (args.Length() == 1 && args[0]->IsBoolean())
-        win->panel()->idcok(args[0]->BooleanValue());
+      if (info.Length() == 1 && info[0]->IsBoolean())
+        win->panel()->idcok(Nan::To<bool>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Leaveok) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsBoolean())
-        ret = win->panel()->leaveok(args[0]->BooleanValue());
+      if (info.Length() == 1 && info[0]->IsBoolean())
+        ret = win->panel()->leaveok(Nan::To<bool>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Syncok) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsBoolean())
-        ret = win->panel()->syncok(args[0]->BooleanValue());
+      if (info.Length() == 1 && info[0]->IsBoolean())
+        ret = win->panel()->syncok(Nan::To<bool>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Immedok) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
-      if (args.Length() == 1 && args[0]->IsBoolean())
-        win->panel()->immedok(args[0]->BooleanValue());
+      if (info.Length() == 1 && info[0]->IsBoolean())
+        win->panel()->immedok(Nan::To<bool>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Keypad) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsBoolean())
-        ret = win->panel()->keypad(args[0]->BooleanValue());
+      if (info.Length() == 1 && info[0]->IsBoolean())
+        ret = win->panel()->keypad(Nan::To<bool>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Meta) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsBoolean())
-        ret = win->panel()->meta(args[0]->BooleanValue());
+      if (info.Length() == 1 && info[0]->IsBoolean())
+        ret = win->panel()->meta(Nan::To<bool>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Standout) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret;
-      if (args.Length() == 1 && args[0]->IsBoolean()) {
-        if (args[0]->BooleanValue())
+      if (info.Length() == 1 && info[0]->IsBoolean()) {
+        if (Nan::To<bool>(info[0]).FromJust())
           ret = win->panel()->standout();
         else
           ret = win->panel()->standend();
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Resetscreen) {
-      NanScope();
-
       ::endwin(); //MyPanel::resetScreen();
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Setescdelay) {
-      NanScope();
-
-      if (args.Length() == 0 || !args[0]->IsInt32()) {
-        return NanThrowError("Invalid argument");
+      if (info.Length() == 0 || !info[0]->IsInt32()) {
+        return Nan::ThrowError("Invalid argument");
       }
 
-      ::set_escdelay(args[0]->Int32Value());
-
-      NanReturnUndefined();
+      ::set_escdelay(Nan::To<int32_t>(info[0]).FromJust());
     }
 
     static NAN_METHOD(LeaveNcurses) {
-      NanScope();
-
       uv_poll_stop(read_watcher_);
       start_rw_poll = true;
 
       ::def_prog_mode();
       ::endwin();
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(RestoreNcurses) {
-      NanScope();
-
       ::reset_prog_mode();
       if (start_rw_poll) {
         uv_poll_start(read_watcher_, UV_READABLE, io_event);
@@ -1729,438 +1614,353 @@ class Window : public ObjectWrap {
       }
 
       MyPanel::redraw();
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Beep) {
-      NanScope();
-
       ::beep();
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Flash) {
-      NanScope();
-
       ::flash();
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(DoUpdate) {
-      NanScope();
-
       MyPanel::doUpdate();
-
-      NanReturnUndefined();
     }
 
     static NAN_METHOD(Colorpair) {
-      NanScope();
-
       int ret;
-      if (args.Length() == 1 && args[0]->IsInt32())
-        ret = MyPanel::pair(args[0]->Int32Value());
-      else if (args.Length() == 3 && args[0]->IsInt32() && args[1]->IsInt32()
-               && args[2]->IsInt32()) {
-        ret = MyPanel::pair(args[0]->Int32Value(), (short)args[1]->Int32Value(),
-                            (short)args[2]->Int32Value());
+      if (info.Length() == 1 && info[0]->IsInt32())
+        ret = MyPanel::pair(Nan::To<int32_t>(info[0]).FromJust());
+      else if (info.Length() == 3 && info[0]->IsInt32() && info[1]->IsInt32()
+               && info[2]->IsInt32()) {
+        ret = MyPanel::pair(Nan::To<int32_t>(info[0]).FromJust(), static_cast<short>(Nan::To<int32_t>(info[1]).FromJust()),
+                            static_cast<short>(Nan::To<int32_t>(info[2]).FromJust()));
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Colorfg) {
-      NanScope();
-
       int ret;
-      if (args.Length() == 1 && args[0]->IsUint32())
-        ret = MyPanel::getFgcolor(args[0]->Uint32Value());
+      if (info.Length() == 1 && info[0]->IsUint32())
+        ret = MyPanel::getFgcolor(Nan::To<uint32_t>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Colorbg) {
-      NanScope();
-
       int ret;
-      if (args.Length() == 1 && args[0]->IsUint32())
-        ret = MyPanel::getBgcolor(args[0]->Uint32Value());
+      if (info.Length() == 1 && info[0]->IsUint32())
+        ret = MyPanel::getBgcolor(Nan::To<uint32_t>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Dup2) {
-      NanScope();
-
       int ret;
-      if (args.Length() == 2 && args[0]->IsUint32() && args[1]->IsUint32())
-        ret = dup2(args[0]->Uint32Value(), args[1]->Uint32Value());
+      if (info.Length() == 2 && info[0]->IsUint32() && info[1]->IsUint32())
+        ret = dup2(Nan::To<uint32_t>(info[0]).FromJust(), Nan::To<uint32_t>(info[1]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Dup) {
-      NanScope();
-
       int ret;
-      if (args.Length() == 1 && args[0]->IsUint32())
-        ret = dup(args[0]->Uint32Value());
+      if (info.Length() == 1 && info[0]->IsUint32())
+        ret = dup(Nan::To<uint32_t>(info[0]).FromJust());
       else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Copywin) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       int ret;
-      if (args.Length() == 7 && args[1]->IsUint32() && args[2]->IsUint32()
-          && args[3]->IsUint32() && args[4]->IsUint32() && args[5]->IsUint32()
-          && args[6]->IsUint32()) {
+      if (info.Length() == 7 && info[1]->IsUint32() && info[2]->IsUint32()
+          && info[3]->IsUint32() && info[4]->IsUint32() && info[5]->IsUint32()
+          && info[6]->IsUint32()) {
         ret = win->panel()->copywin(
-                    *(ObjectWrap::Unwrap<Window>(args[0]->ToObject())->panel()),
-                    args[1]->Uint32Value(), args[2]->Uint32Value(),
-                    args[3]->Uint32Value(), args[4]->Uint32Value(),
-                    args[5]->Uint32Value(), args[6]->Uint32Value());
-      } else if (args.Length() == 8 && args[1]->IsUint32()
-                 && args[2]->IsUint32() && args[3]->IsUint32()
-                 && args[4]->IsUint32() && args[5]->IsUint32()
-                 && args[6]->IsUint32() && args[7]->IsBoolean()) {
+                    *(Nan::ObjectWrap::Unwrap<Window>(info[0].As<Object>())->panel()),
+                    Nan::To<uint32_t>(info[1]).FromJust(), Nan::To<uint32_t>(info[2]).FromJust(),
+                    Nan::To<uint32_t>(info[3]).FromJust(), Nan::To<uint32_t>(info[4]).FromJust(),
+                    Nan::To<uint32_t>(info[5]).FromJust(), Nan::To<uint32_t>(info[6]).FromJust());
+      } else if (info.Length() == 8 && info[1]->IsUint32()
+                 && info[2]->IsUint32() && info[3]->IsUint32()
+                 && info[4]->IsUint32() && info[5]->IsUint32()
+                 && info[6]->IsUint32() && info[7]->IsBoolean()) {
         ret = win->panel()->copywin(
-                    *(ObjectWrap::Unwrap<Window>(args[0]->ToObject())->panel()),
-                    args[1]->Uint32Value(), args[2]->Uint32Value(),
-                    args[3]->Uint32Value(), args[4]->Uint32Value(),
-                    args[5]->Uint32Value(), args[6]->Uint32Value(),
-                    args[7]->BooleanValue());
+                    *(Nan::ObjectWrap::Unwrap<Window>(info[0].As<Object>())->panel()),
+                    Nan::To<uint32_t>(info[1]).FromJust(), Nan::To<uint32_t>(info[2]).FromJust(),
+                    Nan::To<uint32_t>(info[3]).FromJust(), Nan::To<uint32_t>(info[4]).FromJust(),
+                    Nan::To<uint32_t>(info[5]).FromJust(), Nan::To<uint32_t>(info[6]).FromJust(),
+                    Nan::To<bool>(info[7]).FromJust());
       } else {
-        return NanThrowError("Invalid number and/or types of arguments");
+        return Nan::ThrowError("Invalid number and/or types of arguments");
       }
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     static NAN_METHOD(Redrawwin) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
-      NanScope();
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
 
       int ret = win->panel()->redrawwin();
 
-      NanReturnValue(NanNew<Integer>(ret));
+      info.GetReturnValue().Set(ret);
     }
 
     // -- Getters/Setters ------------------------------------------------------
     static NAN_GETTER(EchoStateGetter) {
       assert(property == echo_state_symbol);
 
-      NanScope();
-
-      NanReturnValue(NanNew<Boolean>(MyPanel::echo()));
+      info.GetReturnValue().Set(MyPanel::echo());
     }
 
     static NAN_SETTER(EchoStateSetter) {
       assert(property == echo_state_symbol);
 
       if (!value->IsBoolean()) {
-          return NanThrowTypeError("echo should be of Boolean value");
+          return Nan::ThrowTypeError("echo should be of Boolean value");
       }
 
-      MyPanel::echo(value->BooleanValue());
+      MyPanel::echo(Nan::To<bool>(value).FromJust());
     }
 
    static NAN_GETTER(ShowcursorStateGetter) {
       assert(property == showcursor_state_symbol);
 
-      NanScope();
-
-      NanReturnValue(NanNew<Boolean>(MyPanel::showCursor()));
+      info.GetReturnValue().Set(MyPanel::showCursor());
     }
 
     static NAN_SETTER(ShowcursorStateSetter) {
       assert(property == showcursor_state_symbol);
 
       if (!value->IsBoolean()) {
-          return NanThrowTypeError("showCursor should be of Boolean value");
+          return Nan::ThrowTypeError("showCursor should be of Boolean value");
       }
-      MyPanel::showCursor(value->BooleanValue());
+      MyPanel::showCursor(Nan::To<bool>(value).FromJust());
     }
 
     static NAN_GETTER(LinesStateGetter) {
       assert(property == lines_state_symbol);
 
-      NanScope();
-
-      NanReturnValue(NanNew<Integer>(LINES));
+      info.GetReturnValue().Set(LINES);
     }
 
     static NAN_GETTER(ColsStateGetter) {
       assert(property == cols_state_symbol);
-
-      NanScope();
-
-      NanReturnValue(NanNew<Integer>(COLS));
+      info.GetReturnValue().Set(COLS);
     }
 
     static NAN_GETTER(TabsizeStateGetter) {
       assert(property == tabsize_state_symbol);
-
-      NanScope();
-
-      NanReturnValue(NanNew<Integer>(TABSIZE));
+      info.GetReturnValue().Set(TABSIZE);
     }
 
     static NAN_GETTER(HasmouseStateGetter) {
       assert(property == hasmouse_state_symbol);
 
-      NanScope();
-
-      NanReturnValue(NanNew<Boolean>(MyPanel::hasMouse()));
+      info.GetReturnValue().Set(MyPanel::hasMouse());
     }
 
     static NAN_GETTER(HiddenStateGetter) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
       assert(property == hidden_state_symbol);
 
-      NanScope();
-
-      NanReturnValue(NanNew<Boolean>(win->panel()->hidden()));
+      info.GetReturnValue().Set(win->panel()->hidden());
     }
 
     static NAN_GETTER(HeightStateGetter) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
       assert(property == height_state_symbol);
 
-      NanScope();
-
-      NanReturnValue(NanNew<Integer>(win->panel()->height()));
+      info.GetReturnValue().Set(win->panel()->height());
     }
 
     static NAN_GETTER(WidthStateGetter) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
       assert(property == width_state_symbol);
 
-      NanScope();
-
-      NanReturnValue(NanNew<Integer>(win->panel()->width()));
+      info.GetReturnValue().Set(win->panel()->width());
     }
 
     static NAN_GETTER(BegxStateGetter) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
       assert(property == begx_state_symbol);
 
-      NanScope();
-
-      NanReturnValue(NanNew<Integer>(win->panel()->begx()));
+      info.GetReturnValue().Set(win->panel()->begx());
     }
 
     static NAN_GETTER(BegyStateGetter) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
       assert(property == begy_state_symbol);
 
-      NanScope();
-
-      NanReturnValue(NanNew<Integer>(win->panel()->begy()));
+      info.GetReturnValue().Set(win->panel()->begy());
     }
 
     static NAN_GETTER(CurxStateGetter) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
       assert(property == curx_state_symbol);
 
-      NanScope();
-
-      NanReturnValue(NanNew<Integer>(win->panel()->curx()));
+      info.GetReturnValue().Set(win->panel()->curx());
     }
 
     static NAN_GETTER(CuryStateGetter) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
       assert(property == cury_state_symbol);
 
-      NanScope();
-
-      NanReturnValue(NanNew<Integer>(win->panel()->cury()));
+      info.GetReturnValue().Set(win->panel()->cury());
     }
 
     static NAN_GETTER(MaxxStateGetter) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
       assert(property == maxx_state_symbol);
 
-      NanScope();
-
-      NanReturnValue(NanNew<Integer>(win->panel()->maxx()));
+      info.GetReturnValue().Set(win->panel()->maxx());
     }
 
     static NAN_GETTER(MaxyStateGetter) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
       assert(property == maxy_state_symbol);
 
-      NanScope();
-
-      NanReturnValue(NanNew<Integer>(win->panel()->maxy()));
+      info.GetReturnValue().Set(win->panel()->maxy());
     }
 
     static NAN_GETTER(BkgdStateGetter) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
       assert(property == bkgd_state_symbol);
 
-      NanScope();
-
-      NanReturnValue(NanNew<Integer>(win->panel()->getbkgd()));
+      info.GetReturnValue().Set(win->panel()->getbkgd());
     }
 
     static NAN_SETTER(BkgdStateSetter) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
       assert(property == bkgd_state_symbol);
       unsigned int val = 32;
 
       if (!value->IsUint32() && !value->IsString()) {
-          return NanThrowTypeError("bkgd should be of unsigned integer or a string value");
+          return Nan::ThrowTypeError("bkgd should be of unsigned integer or a string value");
       }
       if (value->IsString()) {
-        String::Utf8Value str(value->ToString());
+        Nan::Utf8String str(value.As<String>());
         if (str.length() > 0)
           val = (unsigned int)((*str)[0]);
       } else
-        val = value->Uint32Value();
+        val = Nan::To<uint32_t>(value).FromJust();
 
       win->panel()->bkgd(val);
     }
 
     static NAN_GETTER(HascolorsStateGetter) {
       assert(property == hascolors_state_symbol);
-
-      NanScope();
-
-      NanReturnValue(NanNew<Boolean>(MyPanel::has_colors()));
+      info.GetReturnValue().Set(MyPanel::has_colors());
     }
 
     static NAN_GETTER(NumcolorsStateGetter) {
       assert(property == numcolors_state_symbol);
-
-      NanScope();
-
-      NanReturnValue(NanNew<Integer>(MyPanel::num_colors()));
+      info.GetReturnValue().Set(MyPanel::num_colors());
     }
 
     static NAN_GETTER(MaxcolorpairsStateGetter) {
       assert(property == maxcolorpairs_state_symbol);
-
-      NanScope();
-
-      NanReturnValue(NanNew<Integer>(MyPanel::max_pairs()));
+      info.GetReturnValue().Set(MyPanel::max_pairs());
     }
 
     static NAN_GETTER(WintouchedStateGetter) {
-      Window *win = ObjectWrap::Unwrap<Window>(args.This());
+      Window *win = Nan::ObjectWrap::Unwrap<Window>(info.This());
       assert(win);
       assert(property == wintouched_state_symbol);
 
-      NanScope();
-
-      NanReturnValue(NanNew<Boolean>(win->panel()->is_wintouched()));
+      info.GetReturnValue().Set(win->panel()->is_wintouched());
     }
 
     static NAN_GETTER(RawStateGetter) {
       assert(property == raw_state_symbol);
-
-      NanScope();
-
-      NanReturnValue(NanNew<Boolean>(MyPanel::raw()));
+      info.GetReturnValue().Set(MyPanel::raw());
     }
 
     static NAN_SETTER(RawStateSetter) {
       assert(property == raw_state_symbol);
 
       if (!value->IsBoolean()) {
-          return NanThrowTypeError("raw should be of Boolean value");
+          return Nan::ThrowTypeError("raw should be of Boolean value");
       }
 
-      MyPanel::raw(value->BooleanValue());
+      MyPanel::raw(Nan::To<bool>(value).FromJust());
     }
 
     static NAN_GETTER(ACSConstsGetter) {
-      NanScope();
-
-      NanReturnValue(NanNew(ACS_Chars));
+      info.GetReturnValue().Set(Nan::New(ACS_Chars));
     }
 
     static NAN_GETTER(KeyConstsGetter) {
-      NanScope();
-
-      NanReturnValue(NanNew(Keys));
+      info.GetReturnValue().Set(Nan::New(Keys));
     }
 
     static NAN_GETTER(ColorConstsGetter) {
-      NanScope();
-
-      NanReturnValue(NanNew(Colors));
+      info.GetReturnValue().Set(Nan::New(Colors));
     }
 
     static NAN_GETTER(AttrConstsGetter) {
-      NanScope();
-
-      NanReturnValue(NanNew(Attrs));
+      info.GetReturnValue().Set(Nan::New(Attrs));
     }
 
     static NAN_GETTER(NumwinsGetter) {
-      NanScope();
-
-      NanReturnValue(NanNew<Integer>(wincounter));
+      info.GetReturnValue().Set(wincounter);
     }
 
-    Window() : ObjectWrap() {
+    Window() : Nan::ObjectWrap() {
       panel_ = NULL;
       this->init();
       assert(panel_ != NULL);
     }
 
-    Window(int nlines, int ncols, int begin_y, int begin_x) : ObjectWrap() {
+    Window(int nlines, int ncols, int begin_y, int begin_x) : Nan::ObjectWrap() {
       panel_ = NULL;
       this->init(nlines, ncols, begin_y, begin_x);
       assert(panel_ != NULL);
     }
 
     ~Window() {
-      NanDisposePersistent(Emit);
+      Emit.Reset();
     }
 
   private:
     static void io_event (uv_poll_t* w, int status, int revents) {
-      NanScope();
+      Nan::HandleScope scope;
 
       if (status < 0)
         return;
 
       if (revents & UV_READABLE) {
         wint_t chr;
+        uint16_t tmp;
         int ret;
-        wchar_t tmp[2];
-        tmp[1] = 0;
         while ((ret = get_wch(&chr)) != ERR) {
           // 410 == KEY_RESIZE
           if (chr == 410 || !topmost_panel || !topmost_panel->getWindow()
@@ -2169,24 +1969,21 @@ class Window : public ObjectWrap {
             //  ungetch(chr);
             return;
           }
-          tmp[0] = chr;
 
-          Handle<Value> emit_argv[4] = {
-            NanNew(inputchar_symbol),
-            NanNew((const uint16_t*) tmp),
-            NanNew<Integer>(chr),
-            NanNew<Boolean>(ret == KEY_CODE_YES)
+          tmp = static_cast<uint16_t>(chr);
+
+          Local<Value> emit_argv[4] = {
+            Nan::New(inputchar_symbol),
+            Nan::New<String>(&tmp, 1).ToLocalChecked(),
+            Nan::New(chr),
+            Nan::New(ret == KEY_CODE_YES)
           };
-          TryCatch try_catch;
-          NanNew(topmost_panel->getWindow()->Emit)->Call(
-              NanObjectWrapHandle(topmost_panel->getWindow()), 4, emit_argv
+          Nan::TryCatch try_catch;
+          Nan::New(topmost_panel->getWindow()->Emit)->Call(
+              topmost_panel->getWindow()->handle(), 4, emit_argv
           );
           if (try_catch.HasCaught())
-#if NODE_MODULE_VERSION < 12
-            FatalException(try_catch);
-#else
-            FatalException(Isolate::GetCurrent(), try_catch);
-#endif
+            Nan::FatalException(try_catch);
         }
       }
     }
@@ -2195,10 +1992,10 @@ class Window : public ObjectWrap {
 };
 
 extern "C" {
-  void init (Handle<Object> target) {
-    NanScope();
+  static NAN_MODULE_INIT(init) {
+    Nan::HandleScope scope;
     Window::Initialize(target);
   }
 
-  NODE_MODULE(binding, init);
+  NODE_MODULE(binding, init)
 }
