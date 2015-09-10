@@ -1,3 +1,6 @@
+## THIS MODULE IS NO LONGER BEING MAINTAINED. If you would like to become a maintainer, please submit an issue.
+### You may want to look at [`blessed`](https://github.com/chjj/blessed) as a better alternative to this module.
+
 Description
 ===========
 
